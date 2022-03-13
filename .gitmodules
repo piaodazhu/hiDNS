@@ -1,3 +1,0 @@
-[submodule "ins-server/cJSON"]
-	path = ins-server/cJSON
-	url = https://gitee.com/DaveGamble/cJSON.git
