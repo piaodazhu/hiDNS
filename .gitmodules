@@ -1,0 +1,3 @@
+[submodule "iDNS/idns_server/cJSON"]
+        path = iDNS/ins-server/cJSON
+        url = https://github.com/DaveGamble/cJSON.git
