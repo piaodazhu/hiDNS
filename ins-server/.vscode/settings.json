@@ -1,0 +1,7 @@
+{
+    "files.associations": {
+        "cjson.h": "c",
+        "loadconf.h": "c",
+        "rkt.h": "c"
+    }
+}

@@ -1,0 +1,19 @@
+{
+    "files.associations": {
+        "updatezone.h": "c",
+        "idns_pt.h": "c",
+        "idomainadminconfig.h": "c",
+        "idnsadmin.h": "c",
+        "sec_algorithm.h": "c",
+        "idns_prt.h": "c",
+        "globalconfig.h": "c",
+        "ipsock.h": "c",
+        "idns_eit.h": "c",
+        "in.h": "c",
+        "security.h": "c",
+        "limits": "c",
+        "*.tcc": "c",
+        "type_traits": "c",
+        "isockethdr.h": "c"
+    }
+}
