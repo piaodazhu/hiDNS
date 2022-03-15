@@ -79,3 +79,13 @@ ins_init_query_buf(ins_qry_buf* ins_qbuf, unsigned char* bound, const char* name
 	qlen = INS_QHEADERSIZE + strlen(name);
 	return qlen;
 }
+
+unsigned int
+get_ins_ans_ttl(const ins_ans_buf* ins_abuf)
+{
+	if (ins_abuf == NULL) return -1;
+	if (ins_abuf->header.ancount == 0) return 0;
+	const unsigned char* ptr = ins_abuf->buf + INS_AHEADERSIZE;
+	unsigned int ttl = *((unsigned int*)ptr);
+	return ntohl(ttl);
+}

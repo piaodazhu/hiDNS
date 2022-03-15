@@ -76,8 +76,8 @@ missed:
 int
 ins_put_entries_tocache(const ins_qry_buf* querybuf, const ins_ans_buf* ansbuf, int alen, int expiretime)
 {
-	if (conn == NULL) return -2;
-
+	if (conn == NULL || expiretime < 0) return -2;
+	if (expiretime == 0) expiretime = 5;
 	unsigned char valuebuf[1024];
 	unsigned char* valueptr;
 	unsigned char curlen;

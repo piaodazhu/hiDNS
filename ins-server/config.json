@@ -8,8 +8,7 @@
     },
     "INS_PATH_LOCAL": {
         "prefix": [
-            "/edu/bit/lab1/",
-            "/icn/"
+            "/icn/hidns/"
         ],
         "resolver": "127.0.0.1",
         "dstport": 53
@@ -33,17 +32,10 @@
         },
         {
             "prefix": [
-                "/com/host/"
+                "/com/example/"
             ],
-            "resolver": "192.168.66.68",
+            "resolver": "127.0.0.1",
             "dstport": 53
-        },
-        {
-            "prefix": [
-                "/cn/bit/edu/"
-            ],
-            "resolver": "192.168.66.1",
-            "dstport": 53
-        }  
+        }
     ]
 }

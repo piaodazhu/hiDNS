@@ -58,6 +58,7 @@ void dns_module (int clientfd, char* pktbuf, int buflen, const struct prefix_pat
 		ins_abuf.header.rcode = INS_RCODE_INVALID_DNSARG;
 		goto process_finish;
 	}
+// cache
 
 	char domainname[256];
 	int dlen;

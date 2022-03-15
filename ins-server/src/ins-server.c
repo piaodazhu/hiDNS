@@ -4,6 +4,7 @@
 #include <pthread.h>
 #include "ipsock.h"
 #include "loadconf.h"
+#include "ins_cache.h"
 
 void *ins_session_process(void *arg)
 {
@@ -45,6 +46,7 @@ error_out:
 
 int main(int argc, char **argv)
 {
+	ins_connect_cache();
 	openlog("ins-server", LOG_CONS | LOG_PID, 0);
 	char *configFile;
 	if (argc == 1) {
@@ -97,5 +99,6 @@ int main(int argc, char **argv)
 		pthread_create(&tid, NULL, ins_session_process, (void *)&sargs);
 		pthread_detach(tid);
 	}
+	ins_disconnect_cache();
 	return 0;
 }

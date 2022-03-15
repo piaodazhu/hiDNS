@@ -52,7 +52,9 @@ void ins_local_module(int clientfd, char* pktbuf, int pktlen, const struct prefi
 		ins_abuf.header.rcode = INS_RCODE_INVALID_INSARG;
 		goto process_finish;
 	}
-	ins_abuf.header.exacn = exacn < ins_qbuf->header.maxcn? exacn : ins_qbuf->header.maxcn;
+	ins_qbuf->header.maxcn = MIN(exacn, ins_qbuf->header.maxcn);
+	ins_abuf.header.exacn = ins_qbuf->header.maxcn;
+// cache
 
 	char domainname[256];
 	char *domainnameptr = domainname;
@@ -90,6 +92,7 @@ void ins_local_module(int clientfd, char* pktbuf, int pktlen, const struct prefi
 	} 
 	else if (ret == 0) {
 		// no resource record found
+		ins_abuf.header.exaplen = strlen(domainnameptr) + 1;
 		ins_abuf.header.rcode = INS_RCODE_RECORDNOTFOUND;
 	} else {
 		ins_abuf.header.exaplen = strlen(domainnameptr) + 1;

@@ -110,5 +110,7 @@ get_ins_ans_entry(unsigned char* ptr, unsigned char* bound, ins_ans_entry* entry
 int
 set_ins_ans_entry(unsigned char* ptr, unsigned char* bound, ins_ans_entry* entry);
 
+unsigned int
+get_ins_ans_ttl(const ins_ans_buf* ins_abuf);
 
 #endif

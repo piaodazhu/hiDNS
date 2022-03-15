@@ -116,7 +116,8 @@ struct hostent* ins_gethostbyname(const char* name, const char* nameserver,
 
 		alen = sizeof(ins_ans_buf);
 		int ret = ins_resolv(&nserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, 5);
+		// printf("[+] ttl = %u\n", get_ins_ans_ttl(&abuf));
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
 		if (ret != 0) 
 			return NULL;
 
@@ -255,7 +256,7 @@ ins_getaddrbyname2(const char* name, int nlen, const struct sockaddr_in *nameser
 		
 		alen = sizeof(ins_ans_buf);
 		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, 5);
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
 		if (ret != 0) 
 			return NULL;
 
@@ -308,7 +309,7 @@ ins_getnsbyname2(const char* name, int nlen, const struct sockaddr_in *nameserve
 		
 		alen = sizeof(ins_ans_buf);
 		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, 5);
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
 		if (ret != 0) 
 			return NULL;
 
@@ -373,7 +374,7 @@ ins_gettxtbyname2(const char* name, int nlen, const struct sockaddr_in *nameserv
 
 		alen = sizeof(ins_ans_buf);
 		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, 5);
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
 		if (ret != 0) 
 			return NULL;
 
@@ -430,7 +431,7 @@ ins_getsoabyname2(const char* name, int nlen, const struct sockaddr_in *nameserv
 
 		alen = sizeof(ins_ans_buf);
 		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, 5);
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
 		if (ret != 0) 
 			return NULL;
 

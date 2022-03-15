@@ -19,6 +19,8 @@
 #define INS_RCODE_EXCEEDHOPLIMIT	0x2	/*%< can't resolve by forwarding */
 #define INS_RCODE_CANT_PARSE_ANS	0x3	/*%< error occurs when parse DNS answer */
 
+#define INS_RCODE_CACHE_NORECORD	0x4	/*%< error occurs when empty answer is cached */
+
 #define INS_RCODE_INVALID_PACKET	0xB	/*%< invalid query packet format */
 #define INS_RCODE_INVALID_PREFIX	0xD	/*%< invalid prefix format in query */
 #define INS_RCODE_INVALID_CCOUNT	0xC	/*%< invalid component count in query */
@@ -110,5 +112,7 @@ get_ins_ans_entry(unsigned char* ptr, unsigned char* bound, ins_ans_entry* entry
 int
 set_ins_ans_entry(unsigned char* ptr, unsigned char* bound, ins_ans_entry* entry);
 
+unsigned int
+get_ins_ans_ttl(const ins_ans_buf* ins_abuf);
 
 #endif
