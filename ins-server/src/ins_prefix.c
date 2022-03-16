@@ -4,7 +4,7 @@
 #include "ins_prefix.h"
 
 int
-insprefix_check_withmaxcn(unsigned char* name, int nlen, int maxcn, int* exacn, int* exaplen)
+insprefix_check_withmaxcn(const char* name, int nlen, int maxcn, int* exacn, int* exaplen)
 {
 	if (*name != '/') {
 		*exaplen = 0;
@@ -47,7 +47,7 @@ insprefix_check_withmaxcn(unsigned char* name, int nlen, int maxcn, int* exacn, 
 }
 
 int
-insprefix_cn2plen_nocheck(unsigned char* name, int nlen, int componentsnum)
+insprefix_cn2plen_nocheck(const char* name, int nlen, int componentsnum)
 {
 	int idx = 1;
 	int cnum = 0;

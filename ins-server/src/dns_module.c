@@ -10,6 +10,7 @@ void dns_module (int clientfd, char* pktbuf, int buflen, const struct prefix_pat
 #ifdef	INSSLOG_SYSLOG
 	syslog(LOG_INFO, "[+] --> dns_module\n");
 #endif
+	int ret = 0;
 	answerbuf_t dns_abuf;
 	int dns_abuflen = sizeof(dns_abuf);
 	ins_ans_buf ins_abuf;
@@ -58,31 +59,50 @@ void dns_module (int clientfd, char* pktbuf, int buflen, const struct prefix_pat
 		ins_abuf.header.rcode = INS_RCODE_INVALID_DNSARG;
 		goto process_finish;
 	}
-// cache
+	ins_abuf.header.exaplen = exaplen;
+	ins_abuf.header.exacn = exacn;
+
+	// lookup cache
+	ret = ins_get_entries_fromcache(ins_qbuf, &ins_abuf, &ins_abuflen);
+#ifdef	INSSLOG_PRINT
+	printf("[!] cache ret %d\n", ret);
+#endif
+#ifdef	INSSLOG_SYSLOG
+	syslog(LOG_INFO, "[!] cache ret %d\n", ret);
+#endif
+	switch(ret) {
+	case -2: break;
+	case -1: 
+	case 0: goto process_finish;
+	default: 
+		ins_abuf.header.exaplen = (ret & 0xff);
+		ins_abuf.header.exacn = ((ret >> 8) & 0x0f);
+	}
 
 	char domainname[256];
 	int dlen;
-	dlen = insprefix_prefix2domainname_nocheck(ins_qbuf->buf + INS_QHEADERSIZE, exaplen, domainname, 256);
+	dlen = insprefix_prefix2domainname_nocheck(ins_qbuf->buf + INS_QHEADERSIZE, ins_abuf.header.exaplen, domainname, 256);
 
 	res_state res = malloc(sizeof(*res));
 	dns_init(ins_qbuf, res, path->dst);
 	dns_resolve(ins_qbuf, res, domainname, &dns_abuf, &dns_abuflen);
-	int ret = dns_parse(&ins_abuf, ins_qbuf->buf + INS_MAXPKTSIZE, &dns_abuf, dns_abuflen);
+	ret = dns_parse(&ins_abuf, ins_qbuf->buf + INS_MAXPKTSIZE, &dns_abuf, dns_abuflen);
 	dns_close(res);
 	free(res);
 
 	if (ret < 0) {
 		// decode error
 		ins_abuf.header.rcode = INS_RCODE_CANT_PARSE_ANS;
+		ins_abuflen = INS_AHEADERSIZE;
 	} 
 	else if (ret == 0) {
 		// no resource record found
 		ins_abuf.header.rcode = INS_RCODE_RECORDNOTFOUND;
+		ins_abuflen = INS_AHEADERSIZE;
 	} else {
-		ins_abuf.header.exacn = exacn;
-		ins_abuf.header.exaplen = exaplen;
-		ins_abuf.header.rcode = 0;
+		ins_abuf.header.rcode = INS_RCODE_OK;
 		ins_abuflen = ret;
+		ins_put_entries_tocache(ins_qbuf, &ins_abuf, ins_abuflen, get_ins_ans_ttl(&ins_abuf));
 	}
 	
 process_finish:

@@ -8,10 +8,10 @@
 // #define CHECKPREFIX_EMPTY_COMPONENT     -5
 
 int
-insprefix_check_withmaxcn(unsigned char* name, int nlen, int maxcn, int* exacn, int* exaplen);
+insprefix_check_withmaxcn(const char* name, int nlen, int maxcn, int* exacn, int* exaplen);
 
 int
-insprefix_cn2plen(unsigned char* name, int nlen, int componentsnum);
+insprefix_cn2plen(const char* name, int nlen, int componentsnum);
 
 int
 insprefix_prefix2domainname(const char* prefix, int plen, char* domainname, int dlen);

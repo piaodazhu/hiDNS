@@ -43,14 +43,30 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 #endif
 
 	ins_ans_buf ins_abuf;
-	int anslen;
+	int anslen, ret;
 	ins_abuf.header.id = ins_qbuf->header.id;
 	ins_abuf.header.ancount = 0;
+
+	// lookup cache
+	ret = ins_get_entries_fromcache(ins_qbuf, &ins_abuf, &anslen);
+#ifdef	INSSLOG_PRINT
+	printf("[!] cache ret %d\n", ret);
+#endif
+#ifdef	INSSLOG_SYSLOG
+	syslog(LOG_INFO, "[!] cache ret %d\n", ret);
+#endif
+	switch(ret) {
+	case -2: break;
+	case -1: 
+	case 0: goto process_finish;
+	default: 
+		ins_qbuf->header.maxcn = ins_qbuf->header.mincn = ((ret >> 8) & 0x0f);
+	}
 
 	if (ins_qbuf->header.hoplimit == 0) {
 		ins_abuf.header.rcode = INS_RCODE_EXCEEDHOPLIMIT;
 		anslen = INS_AHEADERSIZE;
-		goto avoid_loop;
+		goto process_finish;
 	}
 	--ins_qbuf->header.hoplimit;
 
@@ -65,7 +81,10 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 		ins_abuf.header.rcode = INS_RCODE_CANT_PARSE_ANS;
 		anslen = INS_AHEADERSIZE;
 	}
-avoid_loop:
+	if (ins_abuf.header.rcode = INS_RCODE_OK) {
+		ins_put_entries_tocache(ins_qbuf, &ins_abuf, anslen, get_ins_ans_ttl(&ins_abuf));
+	}
+process_finish:
 	
 	Write(clientfd, ins_abuf.buf, anslen);
 

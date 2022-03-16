@@ -3,7 +3,7 @@ all:	$(OBJDIR)/ins_local_module.o $(OBJDIR)/ins_remote_module.o \
 	$(OBJDIR)/loadconf.o $(OBJDIR)/rkt.o $(OBJDIR)/ipsock.o \
 	$(OBJDIR)/ins_prefix.o $(OBJDIR)/ins_msgformat.o $(OBJDIR)/ins_resolv.o \
 	$(OBJDIR)/cJSON.o $(OBJDIR)/ins-server.o $(OBJDIR)/servertest.o \
-	$(OBJDIR)/ins-client.o $(OBJDIR)/clienttest.o
+	$(OBJDIR)/ins-client.o $(OBJDIR)/clienttest.o $(OBJDIR)/ins_cache.o
 
 $(OBJDIR)/ins_local_module.o: ins_local_module.c
 	$(CC) -c $^ -o $@ -D $(LOGMOD)
@@ -36,4 +36,6 @@ $(OBJDIR)/servertest.o: servertest.c
 $(OBJDIR)/ins-client.o: ins-client.c
 	$(CC) -c $^ -o $@
 $(OBJDIR)/clienttest.o: clienttest.c
+	$(CC) -c $^ -o $@
+$(OBJDIR)/ins_cache.o: ins_cache.c
 	$(CC) -c $^ -o $@
