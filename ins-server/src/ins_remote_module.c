@@ -20,7 +20,7 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 #ifdef	INSSLOG_PRINT
 	printf("---- query ----\n");
 	printf("id: %d\n", ntohs(ins_qbuf->header.id));
-	printf("hoplimit: %d", ins_qbuf->header.hoplimit);
+	printf("hoplimit: %d\n", ins_qbuf->header.hoplimit);
 	printf("rd: %d\n", ins_qbuf->header.rd);
 	printf("aa: %d\n", ins_qbuf->header.aa);
 	printf("mincn: %d\n", ins_qbuf->header.mincn);
@@ -32,7 +32,7 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 #ifdef	INSSLOG_SYSLOG
 	syslog(LOG_INFO, "---- query ----\n");
 	syslog(LOG_INFO, "id: %d\n", ntohs(ins_qbuf->header.id));
-	syslog(LOG_INFO, "hoplimit: %d", ins_qbuf->header.hoplimit);
+	syslog(LOG_INFO, "hoplimit: %d\n", ins_qbuf->header.hoplimit);
 	syslog(LOG_INFO, "rd: %d\n", ins_qbuf->header.rd);
 	syslog(LOG_INFO, "aa: %d\n", ins_qbuf->header.aa);
 	syslog(LOG_INFO, "mincn: %d\n", ins_qbuf->header.mincn);
@@ -81,7 +81,7 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 		ins_abuf.header.rcode = INS_RCODE_CANT_PARSE_ANS;
 		anslen = INS_AHEADERSIZE;
 	}
-	if (ins_abuf.header.rcode = INS_RCODE_OK) {
+	if (ins_abuf.header.rcode == INS_RCODE_OK) {
 		ins_put_entries_tocache(ins_qbuf, &ins_abuf, anslen, get_ins_ans_ttl(&ins_abuf));
 	}
 process_finish:

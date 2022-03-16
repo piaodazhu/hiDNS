@@ -472,8 +472,16 @@ ins_getsoabyname2(const char* name, int nlen, const struct sockaddr_in *nameserv
 int ins_resolv(const struct sockaddr_in *nameserver,
 	const ins_qry_buf *qbuf, int qlen, ins_ans_buf *abuf, int *alen)
 {
+#ifdef INS_UNIX_SOCK
+	struct sockaddr_un unixserver;
+	unixserver.sun_family = AF_UNIX;
+	strcpy(unixserver.sun_path, "/tmp/hidns.sock");
+	int fd = socket(AF_UNIX, SOCK_STREAM, 0);
+	connect(fd, (struct sockaddr*) &unixserver, sizeof(struct sockaddr_un));
+#else
 	int fd = Socket(AF_INET, SOCK_STREAM, 0);
 	Connect(fd, (struct sockaddr*)nameserver, sizeof(struct sockaddr_in));
+#endif	
 	Write(fd, qbuf->buf, qlen);
 	*alen = Read(fd, abuf->buf, INS_MAXPKTSIZE);
 	close(fd);

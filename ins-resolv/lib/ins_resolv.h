@@ -6,6 +6,10 @@
 #include "ins_msgformat.h"
 #include "ins_ipsock.h"
 #include "ins_localcache.h"
+// #define INS_UNIX_SOCK
+#ifdef INS_UNIX_SOCK
+#include <sys/un.h>
+#endif	
 
 // name and nameserver must be C string ending with 0
 struct hostent*

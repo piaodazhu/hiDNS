@@ -6,6 +6,12 @@
 #include "loadconf.h"
 #include "ins_cache.h"
 
+// #define INS_UNIX_SOCK
+
+#ifdef INS_UNIX_SOCK
+#include <sys/un.h>
+#endif
+
 void *ins_session_process(void *arg)
 {
 	ins_qry_buf qbuf;
@@ -73,7 +79,24 @@ int main(int argc, char **argv)
 	load_conf_json(configFile);	
 
 	int connfd, listenfd;
+#ifdef INS_UNIX_SOCK
+	struct sockaddr_un unixserver;
+	int ret;
+	unixserver.sun_family = AF_UNIX;
+	if (access("/tmp/hidns.sock", 0) == 0) {
+		ret = remove("/tmp/hidns.sock");
+		printf("remove file, ret = %d\n", ret);
+	}
+	strcpy(unixserver.sun_path, "/tmp/hidns.sock");
+	listenfd = socket(AF_UNIX, SOCK_STREAM, 0);
+	// printf("listenfd = %d\n", listenfd);
+	ret = bind(listenfd, (struct sockaddr*) &unixserver, sizeof(struct sockaddr_un));   
+	// printf("bindret = %d\n", ret);
+	ret = listen(listenfd, 20);
+	// printf("listenret = %d\n", ret);
+#else
 	listenfd = TCPstart_up(&GLOBAL_LOCALADDR, 1000);
+#endif
 
 	struct sockaddr_in remote;
 	socklen_t addrlen = sizeof(struct sockaddr);
@@ -83,6 +106,9 @@ int main(int argc, char **argv)
 
 	while (1)
 	{
+#ifdef INS_UNIX_SOCK
+		connfd = accept(listenfd, (struct sockaddr*)&remote, &addrlen);
+#else
 		connfd = Accept(listenfd,(struct sockaddr*)&remote, &addrlen);
 
 #ifdef	INSSLOG_PRINT
@@ -91,13 +117,17 @@ int main(int argc, char **argv)
 #ifdef	INSSLOG_SYSLOG
 			syslog(LOG_INFO, "accept new client from: %s: %d\n", inet_ntoa(remote.sin_addr), ntohs(remote.sin_port));
 #endif
+
+#endif
 		if (errno == EINTR) {
 			continue;
 		}
 		sargs.remote = remote;
 		sargs.sockfd = connfd;
+
 		pthread_create(&tid, NULL, ins_session_process, (void *)&sargs);
 		pthread_detach(tid);
+
 	}
 	ins_disconnect_cache();
 	return 0;
