@@ -94,8 +94,24 @@ int main(int argc, char **argv)
 	// printf("bindret = %d\n", ret);
 	ret = listen(listenfd, 20);
 	// printf("listenret = %d\n", ret);
+
+#ifdef	INSSLOG_PRINT
+			printf("[+] start UNIX SOCK server...\n");
+#endif
+#ifdef	INSSLOG_SYSLOG
+			syslog(LOG_ERR, "[+] start UNIX SOCK server...\n");
+#endif
+
 #else
 	listenfd = TCPstart_up(&GLOBAL_LOCALADDR, 1000);
+
+#ifdef	INSSLOG_PRINT
+			printf("[+] start TCP server...\n");
+#endif
+#ifdef	INSSLOG_SYSLOG
+			syslog(LOG_ERR, "[+] start TCP server...\n");
+#endif
+
 #endif
 
 	struct sockaddr_in remote;
