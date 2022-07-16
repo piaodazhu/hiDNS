@@ -7,7 +7,7 @@ uint8_t manager_process(struct sockaddr_in remote, char* rcvbuf);
 
 void *session_process(void *arg)
 {
-	struct session_args *sargs = (struct session_args*) arg;
+	struct session_args *sargs, = (struct session_args*) arg;
 	int sockfd = sargs->sockfd;
 	struct sockaddr_in remote = sargs->remote;
 

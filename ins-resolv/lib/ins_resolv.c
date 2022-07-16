@@ -5,14 +5,14 @@
 int
 ins_prefixdomainname2prefix(const char* domainname, int dlen, char* prefix, int plen)
 {
-	if (dlen > plen || dlen > 255)
+	if (dlen > plen || dlen >= INS_PFXMAXSIZE)
 		return -1;
 	if (domainname[dlen - 1] == '.') --dlen;
 	
 	plen = dlen + 2;
 	
-	char buf[256];
-	char *reverse_ptr = buf + 256;
+	char buf[INS_PFXMAXSIZE];
+	char *reverse_ptr = buf + INS_PFXMAXSIZE;
 	int idx = 0;
 	int pre_dot = -1;
 	int clen = 0;
@@ -44,7 +44,8 @@ ins_prefixdomainname2prefix(const char* domainname, int dlen, char* prefix, int 
 	return plen;
 }
 
-int insprefix_count_components(const char* prefix, int plen)
+int 
+insprefix_count_components(const char* prefix, int plen)
 {
 	if (prefix[0] != '/' || prefix[plen - 1] != '/') return -1;
 	int idx = 1;
@@ -67,13 +68,14 @@ int insprefix_count_components(const char* prefix, int plen)
 	return cnum;
 }
 
-struct hostent* ins_gethostbyprefix(const char* prefix, const char* nameserver)
+struct hostent* 
+ins_gethostbyprefix(const char* prefix, const char* nameserver)
 {
 	int plen = strlen(prefix);
-	if (plen > 255) return NULL;
+	if (plen >= INS_PFXMAXSIZE) return NULL;
 	int cnum = 0;
 	if (prefix[plen - 1] != '/') {
-		char buf[256];
+		char buf[INS_PFXMAXSIZE];
 		memcpy(buf, prefix, plen);
 		buf[plen] = '/';
 		cnum = insprefix_count_components(buf, plen + 1);
@@ -86,7 +88,8 @@ struct hostent* ins_gethostbyprefix(const char* prefix, const char* nameserver)
 	return ins_gethostbyname(prefix, nameserver, cnum, cnum);
 }
 
-struct hostent* ins_gethostbyname(const char* name, const char* nameserver, 
+struct hostent* 
+ins_gethostbyname(const char* name, const char* nameserver, 
 			int mincomponentcount, int maxcomponentcount)
 {
 	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
@@ -95,56 +98,70 @@ struct hostent* ins_gethostbyname(const char* name, const char* nameserver,
 		printf("[x] wrong args!\n");
 		return NULL;
 	}
+
+	struct hostent* ht;
+	int h_name_idx = 0, h_alias_idx = 0, h_addr_idx = 0;
+	int i, n, ret;
+	unsigned char *ptr, *bound;
+	char prefixbuf[INS_PFXMAXSIZE];
+	const char *lastname;
+	int lastnamelen;
 	
 	ins_qry_buf qbuf;
 	ins_ans_buf abuf;
+	ins_ans_entry aentry;
 	
-	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_MAXPKTSIZE, name, strlen(name));
+	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_UDPMAXSIZE, name, strlen(name));
 	qbuf.header.qtype = INS_T_A;
 	qbuf.header.maxcn = maxcomponentcount;
 	qbuf.header.mincn = mincomponentcount;
 
-	int alen;
+	int alen = sizeof(ins_ans_buf);
 	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
-	if (cacheret < 0) {
-		// not connect cache or cache missed.
-		// printf("[+] cache missed\n");
-		struct sockaddr_in nserver;
-		nserver.sin_family = AF_INET;
-		nserver.sin_port = htons(5553);
-		nserver.sin_addr.s_addr = inet_addr(nameserver);
 
-		alen = sizeof(ins_ans_buf);
-		int ret = ins_resolv(&nserver, &qbuf, qlen, &abuf, &alen);
-		// printf("[+] ttl = %u\n", get_ins_ans_ttl(&abuf));
-		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
-		if (ret != 0) 
-			return NULL;
-
-	} else {
+	switch (cacheret)
+	{
+	case -2:
+		break;
+	case -1:
+	case 0:
 		// printf("[+] cache hit\n");
+		goto process_ans;
+	default:
+		qbuf.header.mincn = qbuf.header.maxcn = ((cacheret >> 8) & 0x0f);
 	}
-	
-	struct hostent* ht = (struct hostent*) malloc (sizeof(struct hostent));
-	int i, n = abuf.header.ancount;
-	unsigned char* ptr = abuf.buf + INS_AHEADERSIZE;
-	unsigned char* bound = abuf.buf + alen;
-	ins_ans_entry aentry;
 
-	ht->h_name = malloc(256);
-	int h_name_idx = 0;
+	// not connect cache or cache missed.
+		// printf("[+] cache missed\n");
+	struct sockaddr_in nserver;
+	nserver.sin_family = AF_INET;
+	nserver.sin_port = htons(5553);
+	nserver.sin_addr.s_addr = inet_addr(nameserver);
+	
+	ret = ins_resolv(&nserver, &qbuf, qlen, &abuf, &alen);
+	ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
+	if (ret != 0) 
+		return NULL;
+		
+process_ans:
+	ht = (struct hostent*) malloc (sizeof(struct hostent));
+	n = abuf.header.ancount;
+	printf("n = %d, exaplen = %d, alen = %d\n", n, abuf.header.exaplen, alen);
+	ptr = abuf.buf + INS_AHEADERSIZE + abuf.header.exaplen;
+	bound = abuf.buf + alen;
+	printf("prefix = %.*s\n", abuf.header.exaplen, abuf.buf + INS_AHEADERSIZE);
+	ht->h_name = malloc(INS_PFXMAXSIZE);
 	ht->h_aliases = malloc(8 * sizeof(char*));
-	int h_alias_idx = 0;
 	ht->h_addr_list = malloc(8 * sizeof(in_addr_t*));
-	int h_addr_idx = 0;
 	ht->h_addrtype = AF_INET;
 	ht->h_length = 0;
 
-	const char* lastname = name;
-	int lastnamelen = abuf.header.exaplen;
-	char prefixbuf[256];
+	lastname = name;
+	lastnamelen = abuf.header.exaplen;
 	for (i = 0; i < n; i++) {
+		// printf("tag1\n");
 		ptr += get_ins_ans_entry(ptr, bound, &aentry);
+		// printf("tag2:%d, %d\n", aentry.type, aentry.length);
 		switch (aentry.type) {
 		case INS_T_A: {
 			if (h_name_idx == 0) {
@@ -154,6 +171,7 @@ struct hostent* ins_gethostbyname(const char* name, const char* nameserver,
 			}
 			ht->h_addr_list[h_addr_idx] = malloc(sizeof(in_addr_t));
 			memcpy(ht->h_addr_list[h_addr_idx++], aentry.value, aentry.length);
+			// printf("tag3\n");
 			break;
 		}
 		case INS_T_CNAME: {
@@ -161,7 +179,7 @@ struct hostent* ins_gethostbyname(const char* name, const char* nameserver,
 			memcpy(ht->h_aliases[h_alias_idx], lastname, lastnamelen);
 			ht->h_aliases[h_alias_idx++][lastnamelen] = 0;
 			// convert all cname to prefix for formal consistency
-			int ret = ins_prefixdomainname2prefix(aentry.value, aentry.length, prefixbuf, 256);
+			ret = ins_prefixdomainname2prefix(aentry.value, aentry.length, prefixbuf, INS_PFXMAXSIZE);
 			if (ret > 0) {
 				lastnamelen = ret;
 				lastname = prefixbuf;
@@ -177,8 +195,7 @@ struct hostent* ins_gethostbyname(const char* name, const char* nameserver,
 	return ht;
 }
 
-
-in_addr_t*
+in_addr_t**
 ins_getaddrbyname(const char* name, const char* nameserver, 
 			int mincomponentcount, int maxcomponentcount)
 {
@@ -190,8 +207,7 @@ ins_getaddrbyname(const char* name, const char* nameserver,
 			mincomponentcount, maxcomponentcount);	
 }
 
-
-ins_ans_entry*
+char**
 ins_getnsbyname(const char* name, const char* nameserver, 
 			int mincomponentcount, int maxcomponentcount)
 {
@@ -203,8 +219,7 @@ ins_getnsbyname(const char* name, const char* nameserver,
 			mincomponentcount, maxcomponentcount);
 }
 
-
-ins_ans_entry*
+char**
 ins_gettxtbyname(const char* name, const char* nameserver, 
 			int mincomponentcount, int maxcomponentcount)
 {
@@ -216,262 +231,116 @@ ins_gettxtbyname(const char* name, const char* nameserver,
 			mincomponentcount, maxcomponentcount);
 }
 
-
-ins_ans_entry*
-ins_getsoabyname(const char* name, const char* nameserver, 
-			int mincomponentcount, int maxcomponentcount)
-{
-	struct sockaddr_in nserver;
-	nserver.sin_family = AF_INET;
-	nserver.sin_port = htons(5553);
-	nserver.sin_addr.s_addr = inet_addr(nameserver);
-	return ins_getsoabyname2(name, strlen(name), &nserver, 
-			mincomponentcount, maxcomponentcount);
-}
-
-in_addr_t*
+in_addr_t**
 ins_getaddrbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver, 
 			int mincomponentcount, int maxcomponentcount)
 {
-	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
-	mincomponentcount = maxcomponentcount < 0? 0 : mincomponentcount;
-	if (maxcomponentcount < mincomponentcount) {
-		printf("[x] wrong args!\n");
-		return NULL;
-	}
+	hidns_resolv_ans_t *ans = ins_resolv2(name, nlen, nameserver, mincomponentcount, maxcomponentcount, INS_T_A, RESOLV_FLAG_DEFAULT);
+	if (ans == NULL) return NULL;
+	// printf("TAG2\n");
+	int i, len, size = ans->rrsetsize;
+	in_addr_t** addrlist = (in_addr_t**)malloc((size + 1) * sizeof(in_addr_t*));
+	addrlist[size] = NULL;
 	
-	ins_qry_buf qbuf;
-	ins_ans_buf abuf;
-	
-	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_MAXPKTSIZE, name, strlen(name));
-	qbuf.header.qtype = INS_T_A;
-	qbuf.header.maxcn = maxcomponentcount;
-	qbuf.header.mincn = mincomponentcount;
-
-	int alen;
-	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
-	if (cacheret < 0) {
-		// not connect cache or cache missed.
-		// printf("[+] cache missed\n");
-		
-		alen = sizeof(ins_ans_buf);
-		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
-		if (ret != 0) 
-			return NULL;
-
-	} else {
-		// printf("[+] cache hit\n");
+	for (i = 0; i < size; i++) {
+		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
+		if (len != sizeof(in_addr_t)) {
+			continue;
+		}	
+		// printf("len = %d\n", len);
+		addrlist[i] = malloc(len);
+		memcpy(addrlist[i], ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len);
 	}
-	
-	in_addr_t *addrlist = (in_addr_t*) malloc (abuf.header.ancount * sizeof(in_addr_t));
-	in_addr_t *addrlistptr = addrlist;
-	int i, n = abuf.header.ancount;
-	unsigned char* ptr = abuf.buf + INS_AHEADERSIZE;
-	unsigned char* bound = abuf.buf + alen;
-	ins_ans_entry aentry;
-
-	for (i = 0; i < n; i++) {
-		ptr += get_ins_ans_entry(ptr, bound, &aentry);
-		if (aentry.type == INS_T_A) {
-			*addrlistptr++ = *((in_addr_t*)aentry.value);
-		}
-	}
-	*addrlistptr = 0;
+	// printf("TAG3\n");
+	free_hidns_resolv_ans(ans);
 	return addrlist;
 }
 
-
-ins_ans_entry*
+char**
 ins_getnsbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver,
 			int mincomponentcount, int maxcomponentcount)
 {
-	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
-	mincomponentcount = maxcomponentcount < 0? 0 : mincomponentcount;
-	if (maxcomponentcount < mincomponentcount) {
-		printf("[x] wrong args!\n");
-		return NULL;
-	}
+	hidns_resolv_ans_t *ans = ins_resolv2(name, nlen, nameserver, mincomponentcount, maxcomponentcount, INS_T_NS, RESOLV_FLAG_DEFAULT);
+	if (ans == NULL) return NULL;
+	int i, len, size = ans->rrsetsize;
+	char** nslist = (char**)malloc((size + 1) * sizeof(char*));
+	nslist[size] = NULL;
 	
-	ins_qry_buf qbuf;
-	ins_ans_buf abuf;
-	
-	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_MAXPKTSIZE, name, strlen(name));
-	qbuf.header.qtype = INS_T_NS;
-	qbuf.header.maxcn = maxcomponentcount;
-	qbuf.header.mincn = mincomponentcount;
-
-	int alen;
-	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
-	if (cacheret < 0) {
-		// not connect cache or cache missed.
-		// printf("[+] cache missed\n");
-		
-		alen = sizeof(ins_ans_buf);
-		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
-		if (ret != 0) 
-			return NULL;
-
-	} else {
-		// printf("[+] cache hit\n");
+	for (i = 0; i < size; i++) {
+		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
+		// printf("len = %d\n", len);
+		nslist[i] = malloc(len + 1);
+		nslist[i][len] = 0;
+		memcpy(nslist[i], ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len);
 	}
-	
-	ins_ans_entry *aentry = (ins_ans_entry *) malloc (sizeof(ins_ans_entry));
-	int i, n = abuf.header.ancount;
-	unsigned char* ptr = abuf.buf + INS_AHEADERSIZE;
-	unsigned char* bound = abuf.buf + alen;
-	ins_ans_entry entrybuf;
-
-	for (i = 0; i < n; i++) {
-		ptr += get_ins_ans_entry(ptr, bound, &entrybuf);
-		if (entrybuf.type == INS_T_NS) {
-			aentry->ttl = entrybuf.ttl;
-			aentry->type = entrybuf.type;
-			aentry->value = malloc(256);
-
-			int ret = ins_prefixdomainname2prefix(entrybuf.value, entrybuf.length, aentry->value, 256);
-			if (ret > 0) {
-				aentry->length = ret;
-			} else {
-				printf("[x] can't parse NS!\n");
-				free(aentry->value);
-				free(aentry);
-				return NULL;
-			}
-			break;
-		}
-	}
-
-	return aentry;
+	// printf("TAG3\n");
+	free_hidns_resolv_ans(ans);
+	return nslist;
 }
 
-
-ins_ans_entry*
+char**
 ins_gettxtbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver,
 			int mincomponentcount, int maxcomponentcount)
 {
-	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
-	mincomponentcount = maxcomponentcount < 0? 0 : mincomponentcount;
-	if (maxcomponentcount < mincomponentcount) {
-		printf("[x] wrong args!\n");
-		return NULL;
-	}
+	hidns_resolv_ans_t *ans = ins_resolv2(name, nlen, nameserver, mincomponentcount, maxcomponentcount, INS_T_TXT, RESOLV_FLAG_DEFAULT);
+	if (ans == NULL) return NULL;
+	// printf("TAG2\n");
+	int i, len, size = ans->rrsetsize;
+	char** txtlist = (char**)malloc((size + 1) * sizeof(char*));
+	txtlist[size] = NULL;
 	
-	ins_qry_buf qbuf;
-	ins_ans_buf abuf;
-
-	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_MAXPKTSIZE, name, strlen(name));
-	qbuf.header.qtype = INS_T_TXT;
-	qbuf.header.maxcn = maxcomponentcount;
-	qbuf.header.mincn = mincomponentcount;
-
-	int alen;
-	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
-	if (cacheret < 0) {
-		// not connect cache or cache missed.
-		// printf("[+] cache missed\n");
-
-		alen = sizeof(ins_ans_buf);
-		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
-		if (ret != 0) 
-			return NULL;
-
-	} else {
-		// printf("[+] cache hit\n");
+	for (i = 0; i < size; i++) {
+		len = get_ins_entry_len(ans->rrset_lst[i]);
+		// printf("len = %d\n", len);
+		txtlist[i] = malloc(len + 1);
+		txtlist[i][len] = 0;
+		memcpy(txtlist[i], ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len);
 	}
-	
-	ins_ans_entry *aentry = (ins_ans_entry *) malloc (sizeof(ins_ans_entry));
-	int i, n = abuf.header.ancount;
-	unsigned char* ptr = abuf.buf + INS_AHEADERSIZE;
-	unsigned char* bound = abuf.buf + alen;
-	ins_ans_entry entrybuf;
-
-	for (i = 0; i < n; i++) {
-		ptr += get_ins_ans_entry(ptr, bound, &entrybuf);
-		if (entrybuf.type == INS_T_TXT) {
-			aentry->ttl = entrybuf.ttl;
-			aentry->type = entrybuf.type;
-			aentry->length = entrybuf.length;
-			aentry->value = malloc(aentry->length);
-			memcpy(aentry->value, entrybuf.value, aentry->length);
-			break;
-		}
-	}
-
-	return aentry;
+	// printf("TAG3\n");
+	free_hidns_resolv_ans(ans);
+	return txtlist;
 }
-
-
-ins_ans_entry*
-ins_getsoabyname2(const char* name, int nlen, const struct sockaddr_in *nameserver,
-			int mincomponentcount, int maxcomponentcount)
-{
-	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
-	mincomponentcount = maxcomponentcount < 0? 0 : mincomponentcount;
-	if (maxcomponentcount < mincomponentcount) {
-		printf("[x] wrong args!\n");
-		return NULL;
-	}
-	
-	ins_qry_buf qbuf;
-	ins_ans_buf abuf;
-	
-	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_MAXPKTSIZE, name, strlen(name));
-	qbuf.header.qtype = INS_T_SOA;
-	qbuf.header.maxcn = maxcomponentcount;
-	qbuf.header.mincn = mincomponentcount;
-
-	int alen;
-	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
-	if (cacheret < 0) {
-		// not connect cache or cache missed.
-		// printf("[+] cache missed\n");
-
-		alen = sizeof(ins_ans_buf);
-		int ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
-		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
-		if (ret != 0) 
-			return NULL;
-
-	} else {
-		// printf("[+] cache hit\n");
-	}
-
-	ins_ans_entry *aentry = (ins_ans_entry *) malloc (sizeof(ins_ans_entry));
-	int i, n = abuf.header.ancount;
-	unsigned char* ptr = abuf.buf + INS_AHEADERSIZE;
-	unsigned char* bound = abuf.buf + alen;
-	ins_ans_entry entrybuf;
-
-	for (i = 0; i < n; i++) {
-		ptr += get_ins_ans_entry(ptr, bound, &entrybuf);
-		if (entrybuf.type == INS_T_SOA) {
-			aentry->ttl = entrybuf.ttl;
-			aentry->type = entrybuf.type;
-			aentry->value = malloc(256);
-
-			int ret = ins_prefixdomainname2prefix(entrybuf.value, entrybuf.length, aentry->value, 256);
-			if (ret > 0) {
-				aentry->length = ret;
-			} else {
-				printf("[x] can't parse SOA!\n");
-				free(aentry->value);
-				free(aentry);
-				return NULL;
-			}
-			break;
-		}
-	}
-
-	return aentry;
-}
-
 
 int ins_resolv(const struct sockaddr_in *nameserver,
 	const ins_qry_buf *qbuf, int qlen, ins_ans_buf *abuf, int *alen)
 {
+#ifdef INS_UDP_SOCK
+
+	// char logbuf[256];
+	// int logptr = 0;
+	// logptr += sprintf(logbuf + logptr, "---- query ----\n");
+	// logptr += sprintf(logbuf + logptr, "id = %u\n", ntohl(qbuf->header.id));
+	// logptr += sprintf(logbuf + logptr, "aa = %d, ", qbuf->header.aa);
+	// logptr += sprintf(logbuf + logptr, "tc = %d, ", qbuf->header.tc);
+	// logptr += sprintf(logbuf + logptr, "rd = %d, ", qbuf->header.rd);
+	// logptr += sprintf(logbuf + logptr, "ra = %d\n", qbuf->header.ra);
+	// logptr += sprintf(logbuf + logptr, "cd = %d, ", qbuf->header.cd);
+	// logptr += sprintf(logbuf + logptr, "ad = %d, ", qbuf->header.ad);
+	// logptr += sprintf(logbuf + logptr, "od = %d\n", qbuf->header.od);
+	// logptr += sprintf(logbuf + logptr, "hoplimit = %d, ", qbuf->header.hoplimit);
+	// logptr += sprintf(logbuf + logptr, "mincn = %d, ", qbuf->header.mincn);
+	// logptr += sprintf(logbuf + logptr, "maxcn = %d\n", qbuf->header.maxcn);
+
+	// logptr += sprintf(logbuf + logptr, "qtype = %d, ", qbuf->header.qtype);
+	// logptr += sprintf(logbuf + logptr, "qnlen = %d\n", qbuf->header.qnlen);
+	// logptr += sprintf(logbuf + logptr, "name: %.*s\n", qbuf->header.qnlen, qbuf->buf + INS_QHEADERSIZE);
+	// printf("%.*s", logptr, logbuf);
+
+	int fd = socket(AF_INET, SOCK_DGRAM, 0);
+	struct timeval tv;
+	tv.tv_sec = 2;
+	tv.tv_usec = 0;
+	setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, (const char*)&tv, sizeof tv);
+	if (sendto(fd, qbuf->buf, qlen, 0, (struct sockaddr*)nameserver, sizeof(struct sockaddr_in)) < 0 )
+        {
+            perror("send:");  
+            exit(3);   
+        }
+	int len;
+	*alen = recvfrom(fd, abuf->buf, INS_UDPMAXSIZE, 0, (struct sockaddr*)nameserver, &len);
+	close(fd);
+#else
+
 #ifdef INS_UNIX_SOCK
 	struct sockaddr_un unixserver;
 	unixserver.sun_family = AF_UNIX;
@@ -483,14 +352,118 @@ int ins_resolv(const struct sockaddr_in *nameserver,
 	Connect(fd, (struct sockaddr*)nameserver, sizeof(struct sockaddr_in));
 #endif	
 	Write(fd, qbuf->buf, qlen);
-	*alen = Read(fd, abuf->buf, INS_MAXPKTSIZE);
+	*alen = Read(fd, abuf->buf, INS_UDPMAXSIZE);
 	close(fd);
-	
-	if (*alen < INS_AHEADERSIZE || qbuf->header.id != abuf->header.id) {
-		return 8;
+
+#endif
+	if (*alen < INS_AHEADERSIZE) {
+		return -1; // timeout
+	}	
+	if (qbuf->header.id != abuf->header.id) {
+		return -2; // malform answer
 	}
 
 	return (int)abuf->header.rcode;
+}
+
+hidns_resolv_ans_t*
+ins_resolv2(const char* name, int nlen, const struct sockaddr_in *nameserver,
+			int mincomponentcount, int maxcomponentcount, 
+			int qtype, int flags)
+{
+	// TBD: flag can control cache|verify policy
+	maxcomponentcount = maxcomponentcount > 8? 8 : maxcomponentcount;
+	mincomponentcount = maxcomponentcount < 0? 0 : mincomponentcount;
+	if (maxcomponentcount < mincomponentcount) {
+		printf("[x] wrong args!\n");
+		return NULL;
+	}
+	
+	// in_addr_t *addrlist, *addrlistptr;
+	hidns_resolv_ans_t* ans;
+	int i, n, ret;
+	unsigned char *ptr, *bound;
+
+	ins_qry_buf qbuf;
+	ins_ans_buf abuf;
+	ins_ans_entry aentry;
+	
+	int qlen = ins_init_query_buf(&qbuf, qbuf.buf + INS_UDPMAXSIZE, name, strlen(name));
+	qbuf.header.qtype = qtype;
+	qbuf.header.maxcn = maxcomponentcount;
+	qbuf.header.mincn = mincomponentcount;
+
+	int alen = sizeof(ins_ans_buf);
+	int cacheret = ins_get_entries_fromcache(&qbuf, &abuf, &alen);
+
+	switch (cacheret)
+	{
+	case -2:
+		break;
+	case -1:
+	case 0:
+		// printf("[+] cache hit\n");
+		goto cache_hit;
+	default:
+		qbuf.header.mincn = qbuf.header.maxcn = ((cacheret >> 8) & 0x0f);
+	}
+
+	// not connect cache or cache missed.
+	// printf("[+] cache missed\n");
+
+	qbuf.header.cd = ((flags & RESOLV_FLAG_TRUST_AD) != 0);	
+	qbuf.header.cd = ((flags & RESOLV_FLAG_MUST_VERIFY) != 0);
+	
+	if ((flags & RESOLV_FLAG_OVER_DTLS) != 0) {
+	// if (0) {
+		qbuf.header.od = 1;
+		// append nameserver's IP address to query, then send query to DTLS proxy. ONLY IPv4 so far.
+		char *ptr = qbuf.buf + INS_QHEADERSIZE + qbuf.header.qnlen;
+		memcpy(ptr, (char*)&nameserver->sin_addr, sizeof(nameserver->sin_addr));
+		qlen += sizeof(nameserver->sin_addr);
+
+		struct sockaddr_in dlts_proxy;
+		dlts_proxy.sin_family = AF_INET;
+		dlts_proxy.sin_port = htons(5556);
+		dlts_proxy.sin_addr.s_addr = inet_addr("127.0.0.1");
+
+		ret = ins_resolv(&dlts_proxy, &qbuf, qlen, &abuf, &alen);
+	} else {
+		ret = ins_resolv(nameserver, &qbuf, qlen, &abuf, &alen);
+	}
+	
+	if (ret != 0) 
+		return NULL;
+	
+	ans = new_hidns_resolv_ans(&abuf);
+	if (ans == NULL) {
+		return NULL;
+	}
+
+	// verify
+	if (((flags & RESOLV_FLAG_MUST_VERIFY) != 0) || 
+		((flags & RESOLV_FLAG_TRUST_AD) != 0 && abuf.header.ad == 0)) {
+		// TBD: do verify
+		// if not valid, return NULL
+		if (verify_hidns_resolv_ans(ans) != 0) {
+			free_hidns_resolv_ans(ans);
+			return NULL;
+		}
+		// if valid, decide cache and return ans
+		if ((flags & RESOLV_FLAG_AUTO_CACHE) != 0) {
+			ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
+		}
+		return ans;
+	}
+	// cache
+	if ((flags & RESOLV_FLAG_AUTO_CACHE) != 0) {
+		ins_put_entries_tocache(&qbuf, &abuf, alen, get_ins_ans_ttl(&abuf));
+	}
+	return ans;	
+cache_hit:
+	ans = new_hidns_resolv_ans(&abuf);
+	// printf("TAG1\n");
+	return ans;
 }
 
 void

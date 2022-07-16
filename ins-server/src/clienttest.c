@@ -75,7 +75,7 @@ int main()
 	// send
 	Write(fd, qbuf.buf, qlen);
 	// receive
-	alen = Read(fd, abuf.buf, INS_MAXPKTSIZE);
+	alen = Read(fd, abuf.buf, INS_UDPMAXSIZE);
 	close(fd);
 
 	printf("id: %d\n", ntohs(abuf.header.id));

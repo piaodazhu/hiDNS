@@ -13,16 +13,17 @@
 #include "rkt.h"
 #include "ins_msgformat.h"
 #include "ins_prefix.h"
+// #include "ipsock.h"
 
 /* global variables */
-char GLOBAL_NICKNAME[256];
-char GLOBAL_DOMAINNAME[256];
+char GLOBAL_NICKNAME[INS_PFXMAXSIZE];
+char GLOBAL_DOMAINNAME[INS_PFXMAXSIZE];
 struct sockaddr_in GLOBAL_LOCALADDR;
-char GLOBAL_AUTHORIZER[256];
+char GLOBAL_AUTHORIZER[INS_PFXMAXSIZE];
 
-void ins_local_module(int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path);
-void ins_remote_module(int clientfd, char* pktbuf, int pkten, const struct prefix_path *path);
-void dns_module(int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path);
+void ins_local_module(void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path);
+void ins_remote_module(void *sargs, char* pktbuf, int pkten, const struct prefix_path *path);
+void dns_module(void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path);
 
 int load_conf_json(char *filename);
 

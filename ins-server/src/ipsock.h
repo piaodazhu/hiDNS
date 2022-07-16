@@ -18,6 +18,8 @@
 struct session_args {
 	struct sockaddr_in remote;
 	int sockfd;
+	unsigned char* buf;
+	int buflen;
 };
 
 int Socket(int domain, int type, int protocol);

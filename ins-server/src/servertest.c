@@ -45,9 +45,9 @@ int main()
 	struct sockaddr_in client_addr;
 	socklen_t slen;
 	int connfd = Accept(fd, (struct sockaddr*)&client_addr, &slen);
-	int qlen = Read(connfd, qbuf.buf, INS_MAXPKTSIZE);
+	int qlen = Read(connfd, qbuf.buf, INS_UDPMAXSIZE);
 	
-	printf("id: %d\n", ntohs(qbuf.header.id));
+	printf("id: %d\n", ntohl(qbuf.header.id));
 	printf("rd: %d\n", qbuf.header.rd);
 	printf("aa: %d\n", qbuf.header.aa);
 	printf("mincn: %d\n", qbuf.header.mincn);
@@ -70,7 +70,7 @@ int main()
 
 	int i, len, alen = INS_AHEADERSIZE;
 	char *ptr = abuf.buf + INS_AHEADERSIZE;
-	char *bound = abuf.buf + INS_MAXPKTSIZE;
+	char *bound = abuf.buf + INS_UDPMAXSIZE;
 
 	ins_ans_entry aentry[2];
 	aentry[0].ttl = 86400;
@@ -96,7 +96,7 @@ int main()
 		}
 	}
 // debug
-	printf("nid: %d\n", htons(abuf.header.id));
+	printf("nid: %d\n", htonl(abuf.header.id));
 	printf("ra: %d\n", abuf.header.ra);
 	printf("ad: %d\n", abuf.header.ad);
 	printf("rcode: %d\n", abuf.header.rcode);

@@ -9,7 +9,7 @@ int main()
 
 		ins_qry_buf qbuf;
 		char *name = testprefix[i];
-		qbuf.header.id = htons(1234);
+		qbuf.header.id = htonl(1234);
 		qbuf.header.rd = 1;
 		qbuf.header.aa = 1;
 		qbuf.header.hoplimit = 1;

@@ -1,5 +1,5 @@
 CC = gcc
-CFLAGS = -g -O -Wall
+CFLAGS = -g -O2 -Wall
 
 TOPDIR := $(shell pwd)
 SRCDIR := $(TOPDIR)/src

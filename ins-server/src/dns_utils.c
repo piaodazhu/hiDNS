@@ -31,15 +31,15 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 		return 0;
 	}
 
-	ins_abuf->header.ad = dns_abuf->header.ad;
-	ins_abuf->header.ra = dns_abuf->header.ra;
+	ins_abuf->header.aa = dns_abuf->header.aa;
+	ins_abuf->header.tc = dns_abuf->header.tc;
 	ins_abuf->header.ancount = m;
 
-	unsigned char* dst = ins_abuf->buf + INS_AHEADERSIZE;
+	unsigned char* dst = ins_abuf->buf + INS_AHEADERSIZE + ins_abuf->header.exaplen;
 	unsigned char* ptr = dns_abuf->buf + sizeof(HEADER);
 	unsigned char* end = dns_abuf->buf + dns_abuflen;
 	int i, n;
-	char fullname[256];
+	char fullname[INS_PFXMAXSIZE];
 	n = ntohs(dns_abuf->header.qdcount);
 	// first, walk through all the query
 	while (n-- > 0) {
@@ -79,15 +79,16 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 			break;
 		}
 		case INS_T_NS:
-		case INS_T_CNAME:
-		case INS_T_SOA: {
-			// only get SOA's name
+		case INS_T_CNAME: {
 			dn_expand(dns_abuf->buf, end, ptr, fullname, 256);
 			aentry.value = fullname;
 			aentry.length = strlen(fullname);
 			break;
 		}
-		case INS_T_TXT: {
+		case INS_T_SOA: 
+		case INS_T_TXT:
+		case INS_T_CERT:
+		case INS_T_RRSIG: {
 			aentry.value = ptr;
 			aentry.length = rrdlen;
 			break;
@@ -97,33 +98,12 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 		}
 		}
 
-		if (aentry.type == INS_T_CNAME) {
-			dn_expand(dns_abuf->buf, end, ptr, fullname, 256);
-			aentry.value = fullname;
-			aentry.length = strlen(fullname);
-		} else {
-			aentry.value = ptr;
-			aentry.length = rrdlen;
-		}
-		ptr += rrdlen;
-		
-		// for type CNAME do we need to expand it?
-
 		aentrylen = set_ins_ans_entry(dst, bound, &aentry);
 		if (aentrylen < 0) {
 			return -1;
 		}
 
-		// if (aentry.type == INS_T_A) {
-		// 	printf ("A : %s\n", inet_ntoa(*((struct in_addr*)aentry.value)));
-		// }
-		// else if (aentry.type == INS_T_CNAME) {
-		// 	printf ("CNAME : %.*s\n", aentry.length, aentry.value);
-		// }
-		// if (aentry.type == INS_T_TXT) {
-		// 	printf ("TXT : %.*s\n", aentry.length, aentry.value);
-		// }
-
+		ptr += rrdlen;
 		dst += aentrylen;
 	}
 	return dst - ins_abuf->buf;

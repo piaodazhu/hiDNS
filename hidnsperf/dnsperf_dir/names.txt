@@ -1,0 +1,5 @@
+# This is a comment and is ommited
+# The columns after column 2 will be ommited if one line contains more than 3 colums.
+# stu.lab101.hidns.icn A
+# www.bilibili.com A
+tools.nip.icn A

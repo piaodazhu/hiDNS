@@ -13,7 +13,7 @@ insprefix_check_withmaxcn(const unsigned char* name, int nlen, int maxcn, int* e
 	}
 
 	int cur_idx = 0;
-	int max_idx = nlen > 256?256:nlen;
+	int max_idx = nlen > INS_PFXMAXSIZE?INS_PFXMAXSIZE:nlen;
 	int last_splash = 0;
 	int splash_num = 0;
 	int clen = 0;
@@ -64,11 +64,11 @@ int
 insprefix_prefix2domainname(const char* prefix, int plen, char* domainname, int dlen)
 {
 	if (*prefix != '/') return CHECKPREFIX_INVALID_SYMBOL;
-	if (plen > 255) return CHECKPREFIX_TOOLONG_PREFIX;
+	if (plen >= INS_PFXMAXSIZE) return CHECKPREFIX_TOOLONG_PREFIX;
 	if (prefix[plen - 1] == '/') --plen;
 	if (plen > dlen) return CHECKPREFIX_TOOLONG_PREFIX;
-	char buf[256];
-	char *reverse_ptr = buf + 256;
+	char buf[INS_PFXMAXSIZE];
+	char *reverse_ptr = buf + INS_PFXMAXSIZE;
 	int idx = 1;
 	int pre_splash = 0;
 	int clen = 0;
@@ -106,8 +106,8 @@ insprefix_prefix2domainname_nocheck(const char* prefix, int plen, char* domainna
 
 	if (prefix[plen - 1] == '/') --plen;
 
-	char buf[256];
-	char *reverse_ptr = buf + 256;
+	char buf[INS_PFXMAXSIZE];
+	char *reverse_ptr = buf + INS_PFXMAXSIZE;
 
 	int idx = 1;
 	int pre_splash = 0;

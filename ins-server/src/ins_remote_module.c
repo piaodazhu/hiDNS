@@ -1,7 +1,7 @@
 
 #include "ins_remote_module.h"
 
-void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path)
+void ins_remote_module(void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path)
 {
 	// forwarding the packet to another ins-server
 #ifdef	INSSLOG_PRINT
@@ -14,41 +14,29 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 	// TBD:
 	// set a timeout in case of server failed.
 
+	hidns_sock_ctx_t *ctx = sargs;
 
 	ins_qry_buf *ins_qbuf = (ins_qry_buf*)pktbuf;
-	
-#ifdef	INSSLOG_PRINT
-	printf("---- query ----\n");
-	printf("id: %d\n", ntohs(ins_qbuf->header.id));
-	printf("hoplimit: %d\n", ins_qbuf->header.hoplimit);
-	printf("rd: %d\n", ins_qbuf->header.rd);
-	printf("aa: %d\n", ins_qbuf->header.aa);
-	printf("mincn: %d\n", ins_qbuf->header.mincn);
-	printf("maxcn: %d\n", ins_qbuf->header.maxcn);
-	printf("qtype: %d\n", ins_qbuf->header.qtype);
-	printf("qnlen: %d\n", ins_qbuf->header.qnlen);
-	printf("name: %.*s\n", ins_qbuf->header.qnlen, ins_qbuf->buf + INS_QHEADERSIZE);
-#endif
-#ifdef	INSSLOG_SYSLOG
-	syslog(LOG_INFO, "---- query ----\n");
-	syslog(LOG_INFO, "id: %d\n", ntohs(ins_qbuf->header.id));
-	syslog(LOG_INFO, "hoplimit: %d\n", ins_qbuf->header.hoplimit);
-	syslog(LOG_INFO, "rd: %d\n", ins_qbuf->header.rd);
-	syslog(LOG_INFO, "aa: %d\n", ins_qbuf->header.aa);
-	syslog(LOG_INFO, "mincn: %d\n", ins_qbuf->header.mincn);
-	syslog(LOG_INFO, "maxcn: %d\n", ins_qbuf->header.maxcn);
-	syslog(LOG_INFO, "qtype: %d\n", ins_qbuf->header.qtype);
-	syslog(LOG_INFO, "qnlen: %d\n", ins_qbuf->header.qnlen);
-	syslog(LOG_INFO, "name: %.*s\n", ins_qbuf->header.qnlen, ins_qbuf->buf + INS_QHEADERSIZE);
-#endif
-
 	ins_ans_buf ins_abuf;
-	int anslen, ret;
+	int ins_abuflen = INS_AHEADERSIZE, ret;
+
 	ins_abuf.header.id = ins_qbuf->header.id;
+	ins_abuf.header.aa = 1; // authoritative answer
+	ins_abuf.header.tc = 0;
+	ins_abuf.header.rd = ins_qbuf->header.rd;
+	ins_abuf.header.ra = 1; // TBD: from configuration
+	ins_abuf.header.cd = ins_qbuf->header.cd;
+	ins_abuf.header.ad = 0;
+	ins_abuf.header.od = ins_qbuf->header.od;
+
+	ins_abuf.header.hoplimit = ins_qbuf->header.hoplimit;
+	ins_abuf.header.exacn = 0;
+	ins_abuf.header.exaplen = 0;
+	ins_abuf.header.qtype = ins_qbuf->header.qtype;
 	ins_abuf.header.ancount = 0;
 
 	// lookup cache
-	ret = ins_get_entries_fromcache(ins_qbuf, &ins_abuf, &anslen);
+	ret = ins_get_entries_fromcache(ins_qbuf, &ins_abuf, &ins_abuflen);
 #ifdef	INSSLOG_PRINT
 	printf("[!] cache ret %d\n", ret);
 #endif
@@ -65,49 +53,60 @@ void ins_remote_module(int clientfd, char* pktbuf, int pktlen, const struct pref
 
 	if (ins_qbuf->header.hoplimit == 0) {
 		ins_abuf.header.rcode = INS_RCODE_EXCEEDHOPLIMIT;
-		anslen = INS_AHEADERSIZE;
+		ins_abuflen = INS_AHEADERSIZE;
 		goto process_finish;
 	}
 	--ins_qbuf->header.hoplimit;
 
-	struct sockaddr_in serveraddr = path->dst;
-	int sockfd = Socket(AF_INET,SOCK_STREAM, 0);
-	Connect(sockfd, (struct sockaddr*)&serveraddr, sizeof(struct sockaddr_in));
-	Write(sockfd, pktbuf, pktlen);
-	anslen = Read(sockfd, ins_abuf.buf, INS_MAXPKTSIZE);
-	close(sockfd);
+	// struct sockaddr_in serveraddr = path->dst;
 
-	if (anslen < INS_AHEADERSIZE) {
-		ins_abuf.header.rcode = INS_RCODE_CANT_PARSE_ANS;
-		anslen = INS_AHEADERSIZE;
+// just send out here, open a new fd!
+// find first unused ctx
+	int i;
+	hidns_sock_ctx_t *newctx;
+
+	for (i = 0; i < MAX_SOCK_CTXNUM; i++) {
+		newctx = &g_ctx_array[i];
+		if (newctx->state != F_UNUSED) {
+			continue;
+		}
+
+		newctx->fd = hidns_open_udp_socket(2, (const struct sockaddr*)&path->dst, sizeof(path->dst));
+		if (newctx->fd == -1) {
+			fprintf(stderr, "Error create udp socket failed\n");
+			return;
+		}
+		break;
 	}
-	if (ins_abuf.header.rcode == INS_RCODE_OK) {
-		ins_put_entries_tocache(ins_qbuf, &ins_abuf, anslen, get_ins_ans_ttl(&ins_abuf));
+
+	if (i == MAX_SOCK_CTXNUM) {
+		ins_abuf.header.rcode = INS_RCODE_SERVER_TOOBUSY;
+		goto process_finish;
 	}
-process_finish:
 	
-	Write(clientfd, ins_abuf.buf, anslen);
+	newctx->state = F_CONNECTING;
+	newctx->clientaddr = ctx->clientaddr;
+	newctx->socklen = ctx->socklen;
+	// newctx->listenfd = ctx->fd;
+	newctx->ops.send = hidns_remotectx_send;
+	newctx->ops.recv = hidns_remotectx_recv;
+	memcpy(newctx->query_buf, pktbuf, pktlen);
+	newctx->query_len = pktlen;
+	memcpy(newctx->answer_buf, &ins_abuf, ins_abuflen);
+	newctx->answer_len = ins_abuflen;
+	timeval_t now;
+	gettimeofday(&now, NULL);
+	newctx->lifetime = hidns_timer_add_long(now, g_timeout*1000);
+	
+	hidns_remotectx_send(newctx);
 
-#ifdef	INSSLOG_PRINT
-	printf("---- answer ----\n");
-	printf("id: %d\n", ntohs(ins_abuf.header.id));
-	printf("ad: %d\n", ins_abuf.header.ad);
-	printf("ra: %d\n", ins_abuf.header.ra);
-	printf("exacn: %d\n", ins_abuf.header.exacn);
-	printf("exaplen: %d\n", ins_abuf.header.exaplen);
-	printf("ancount: %d\n", ins_abuf.header.ancount);
-	printf("---- ins_remote_module finished. close connection. ----\n");
-#endif
-#ifdef	INSSLOG_SYSLOG
-	syslog(LOG_INFO, "---- answer ----\n");
-	syslog(LOG_INFO, "id: %d\n", ntohs(ins_abuf.header.id));
-	syslog(LOG_INFO, "ad: %d\n", ins_abuf.header.ad);
-	syslog(LOG_INFO, "ra: %d\n", ins_abuf.header.ra);
-	syslog(LOG_INFO, "exacn: %d\n", ins_abuf.header.exacn);
-	syslog(LOG_INFO, "exaplen: %d\n", ins_abuf.header.exaplen);
-	syslog(LOG_INFO, "ancount: %d\n", ins_abuf.header.ancount);
-	syslog(LOG_INFO, "---- ins_remote_module finished. close connection. ----\n");
-#endif
+	return;
 
-	close(clientfd);
+process_finish:
+	// send back to client
+
+	memcpy(ctx->answer_buf, &ins_abuf, ins_abuflen);
+	ctx->answer_len = ins_abuflen;
+	hidns_listenctx_send(ctx);
+	return;
 }

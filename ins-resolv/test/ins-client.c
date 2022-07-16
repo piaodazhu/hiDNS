@@ -12,7 +12,7 @@ int main(int argc, char **argv)
 		printf("Use example: %s 192.168.66.68 /edu/bit/lab1/students/1234.index 2 4\n", *argv);
 		return -1;
 	}
-	ins_connect_cache();
+	// ins_connect_cache();
 	char* nameserver = argv[1];
 	char *name = argv[2];
 	struct hostent *hptr;
@@ -42,13 +42,13 @@ int main(int argc, char **argv)
 		for (; *pptr != NULL; pptr++)
 		{
 			printf("\taddress: %s\n",
-			       inet_ntop(hptr->h_addrtype, hptr->h_addr, str, sizeof(str)));
+			       inet_ntop(hptr->h_addrtype, *pptr, str, sizeof(str)));
 		}
 		break;
 	default:
 		printf("unknown address type\n");
 		break;
 	}
-	ins_disconnect_cache();
+	// ins_disconnect_cache();
 	return 0;
 }

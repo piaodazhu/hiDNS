@@ -1,5 +1,5 @@
 #ifndef DNS_UTILS_H
-#define DNS_UTILE_H
+#define DNS_UTILS_H
 
 #include <netinet/in.h>
 #include "loadconf.h"

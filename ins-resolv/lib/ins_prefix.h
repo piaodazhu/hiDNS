@@ -7,6 +7,10 @@
 #define CHECKPREFIX_TOOMANY_COMPONENT   -4
 // #define CHECKPREFIX_EMPTY_COMPONENT     -5
 
+#ifndef INS_PFXMAXSIZE
+	#define INS_PFXMAXSIZE	256
+#endif
+
 int
 insprefix_check_withmaxcn(const unsigned char* name, int nlen, int maxcn, int* exacn, int* exaplen);
 

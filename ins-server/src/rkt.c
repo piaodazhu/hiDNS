@@ -28,7 +28,7 @@ void rkt_init()
 }
 
 int rkt_add_path(const char* prefix, int prefixlen, 
-	void* sockbuf, int socklen, void (*process_module) (int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path))
+	void* sockbuf, int socklen, void (*process_module) (void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path))
 {
 	if (ROBIN_KARP_TABLE_SIZE < prefixlen) {
 		return -1;
@@ -74,7 +74,14 @@ int rkt_finish_build()
 
 		// insert sort argorithm
 		int j, k, n;
+		int check_unique_times = 0;
 check_unique:
+		if (check_unique_times > 10) {
+			printf("same prefix to different modules has not been supported yet! check your configuration.\n");
+			exit(1);
+		}
+
+
 		for (j = 1; j < tmpbufsize; j++) {
 			n = tmpbuf[j];
 			for (k = j - 1; k >= 0; k--) {
@@ -89,6 +96,7 @@ check_unique:
 									rkt.compute_mul, rkt.table[i].compute_mod);
 						tmpbuf[tmpbufidx++] = ppath->rkv;
 					}
+					check_unique_times++;
 					goto check_unique;
 				} else {
 					break;
@@ -149,7 +157,7 @@ check_unique:
 }
 
 
-int rkt_route(int clientfd, char* name, int nlen, char* pktbuf, int pktlen)
+int rkt_route(void *sargs, char* name, int nlen, char* pktbuf, int pktlen)
 {
 	// TBD: extract name from packet first, here we do this simply
 	int maxprefixlen = nlen < rkt.table_len ? nlen : rkt.table_len;
@@ -185,5 +193,6 @@ int rkt_route(int clientfd, char* name, int nlen, char* pktbuf, int pktlen)
 		}
 	}
 
-	matched_path->process_module(clientfd, pktbuf, pktlen, matched_path);
+	matched_path->process_module(sargs, pktbuf, pktlen, matched_path);
+	return 0;
 }

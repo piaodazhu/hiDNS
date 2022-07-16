@@ -1,0 +1,61 @@
+# This is a comment and is ommited
+# The columns after column 2 will be ommited if one line contains more than 3 colums.
+
+# hiDNS-DNS
+# 0 INVALID
+# /com/example/norec/1/2/3/4 A 3 2
+# 1 NoRecord
+# /com/example/norec/1/2/3/4 A 3 3
+# 2 LocalResolv
+# /com/example/test/1/2/3/4 A 3 3
+# 3 Forwarded
+# /com/bilibili/www/123 A 3 3
+
+# hiDNS-INS-DIST
+# 0 NoRecord
+# /icn/hidns/lab101/1/2/3/4 A 4 4
+# 1 DIST=L0
+# /icn/hidns/lab101/1/2/3/4 A 3 3
+# 2 DIST=L1
+# /icn/hidns/lab101/1/2/3/4 A 3 4
+# 3 DIST=L2
+# /icn/hidns/lab101/1/2/3/4 A 3 5
+# 3 DIST=L3
+# /icn/hidns/lab101/1/2/3/4 A 3 6
+
+# hiDNS-INS-DIST-Forwarded
+# 0 NoRecord
+# /icn/nip/tool/1/2/3/4 A 3 3
+# 1 DIST=L0
+# /icn/nip/tools/1/2/3/4 A 3 3
+# 2 DIST=L1
+# /icn/nip/tools/1/2/3/4 A 3 4
+# 3 DIST=L2
+# /icn/nip/tools/1/2/3/4 A 3 5
+# 3 DIST=L3
+# /icn/nip/tools/1/2/3/4 A 3 6
+
+# TEST RULES
+# 1 LocalResolv
+# /com/example/test/1/2/3/4 A 3 3
+# 2 Forwarded
+# /icn/nip/tools/1/2/3/4 A 3 3
+
+# TEST CACHE LOCAL
+# 1 firstMISS
+# /icn/hidns/lab101/1/2/3/4 A 3 3
+# 2 firstHIT
+# /icn/hidns/lab101/1/2/3/4 A 3 3
+# 1 secondMISS
+# /icn/hidns/lab101/1/2/3/4 A 3 6
+# 1 secondHIT
+# /icn/hidns/lab101/1/2/3/4 A 3 6
+# TEST CACHE Forwarded
+# 1 firstMISS
+/icn/nip/tools/1/2/3/4 A 3 3
+# 2 firstHIT
+# /icn/nip/tools/1/2/3/4 A 3 3
+# 1 secondMISS
+# /icn/nip/tools/1/2/3/4 A 3 6
+# 1 secondHIT
+# /icn/nip/tools/1/2/3/4 A 3 6

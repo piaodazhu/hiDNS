@@ -3,7 +3,7 @@
 
 int load_conf_json(char *filename)
 {
-	char config_buf[4096];
+	char config_buf[1024*1024];
 	FILE *fp = fopen(filename, "rb");
 	if (fp == NULL) {
 #ifdef	INSSLOG_PRINT
@@ -14,7 +14,7 @@ int load_conf_json(char *filename)
 #endif
 		exit(1);
 	}
-	size_t config_len = fread(config_buf, 1, 4096, fp);
+	size_t config_len = fread(config_buf, 1, 1024*1024, fp);
 	fclose(fp);
 	config_buf[config_len] = 0;
 

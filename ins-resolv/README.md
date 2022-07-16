@@ -167,18 +167,21 @@ typedef struct {
 typedef struct {
 	unsigned int	ttl;
 	unsigned char	type;
+	unsigned char	reserved;
 	unsigned short	length;
 	unsigned char	*value;
 } ins_ans_entry;
 
 typedef union {
 	INS_QUERY_HEADER	header;
-	unsigned char		buf[INS_MAXPKTSIZE];
+	unsigned char		buf[INS_UDPMAXSIZE];
 } ins_qry_buf;
 
 typedef union {
 	INS_ANSWER_HEADER	header;
-	unsigned char		buf[INS_MAXPKTSIZE];
+	unsigned char		buf[INS_UDPMAXSIZE];
 } ins_ans_buf;
 
 ```
+## Dependency
+- `base64.h` and `base64.c` come from this repository: [zhicheng/base64](https://github.com/zhicheng/base64)

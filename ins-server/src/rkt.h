@@ -10,7 +10,7 @@ typedef struct prefix_path {
     int pathlen;
     char* pathbuf;
     struct sockaddr_in dst;
-    void (*process_module) (int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path);
+    void (*process_module) (void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path);
 
     int rkv; // robin karp value
     int isfinal; // help fast finish matching
@@ -37,10 +37,10 @@ typedef struct robinkarp_table {
 void rkt_init();
 
 int rkt_add_path(const char* prefix, int prefixlen, 
-	void* sockbuf, int socklen, void (*process_module) (int clientfd, char* pktbuf, int pktlen, const struct prefix_path *path));
+	void* sockbuf, int socklen, void (*process_module) (void *sargs, char* pktbuf, int pktlen, const struct prefix_path *path));
 
 int rkt_finish_build();
 
-int rkt_route(int clientfd, char* name, int nlen, char* pktbuf, int pktlen);
+int rkt_route(void *sargs, char* name, int nlen, char* pktbuf, int pktlen);
 
 #endif
