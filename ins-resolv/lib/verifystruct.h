@@ -10,15 +10,17 @@
 
 #define HIDNS_ALGO_RSASHA1	5
 #define HIDNS_ALGO_RSASHA256	8
+#define HIDNS_ALGO_ECDSAP256SHA256	13	
+#define HIDNS_ALGO_ECDSAP384SHA384	14
 #define HIDNS_ALGO_ED25519	15
 
 #define SIGNATURE_ST_FIXLEN 14
 typedef struct hidns_signature_st {
 	unsigned short	sigkeytag;
 	unsigned char	algorithm;
+	unsigned char	signerlen;
 	unsigned int	expirtime;
 	unsigned int	inceptime;
-	unsigned char	signerlen;
 	unsigned short	sigbuflen;
 	unsigned char*	signerpfx;
 	unsigned char*	signature;
@@ -48,6 +50,8 @@ typedef struct hidns_resolv_ans
 #define VERIFY_REQ_ARGTYPE_SIG_ED25519 21
 #define VERIFY_REQ_ARGTYPE_SIG_SHA1RSA 22
 #define VERIFY_REQ_ARGTYPE_SIG_SHA256RSA 24
+#define VERIFY_REQ_ARGTYPE_SIG_SHA256SECP256R1	26
+#define VERIFY_REQ_ARGTYPE_SIG_SHA384SECP384R1	27
 
 #define VERIFY_ANS_RCODE_OK 0
 #define VERIFY_ANS_RCODE_MSG_MALFORMED 1
@@ -116,6 +120,9 @@ free_hidns_signature_st(hidns_signature_st_t *signature);
 
 int
 make_hidns_verify_request_msg(verifyreq_buf *reqbuf, int reqbufsize, const hidns_resolv_ans_t *ans);
+
+int
+make_hidns_verify_request_msg2(verifyreq_buf *reqbuf, int reqbufsize, const unsigned char* tbsbuf, int tbslen, const unsigned char* signerbuf, int signerlen, const unsigned char* sigbuf, int siglen, unsigned char algorithm);
 
 int
 make_hidns_verify_request_cert(verifyreq_buf *reqbuf, int reqbufsize, const hidns_resolv_ans_t *ans);

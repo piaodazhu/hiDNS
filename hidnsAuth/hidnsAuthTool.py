@@ -18,7 +18,7 @@ def parse_args():
 	parser.add_argument("-cert", "--certificate", help="location of pem certificate", type=str, default="")
 	parser.add_argument("-outputdir", "--output-directory", help="output directory", type=str, default="./")
 	parser.add_argument("-outputfile", "--output-file", help="output file", type=str)
-	parser.add_argument("-keyalgo", "--keypair-algorithm", help="Only for keygen. Either secp384r1, ed25519 or rsa is accepted.", type=str, default="secp384r1")
+	parser.add_argument("-keyalgo", "--keypair-algorithm", help="Only for keygen. Either secp256r1, secp384r1, ed25519 or rsa is accepted.", type=str, default="secp256r1")
 	parser.add_argument("-digestalgo", "--digest-algorithm", help="Only for rsa keypair. Either sha1, sha224, sha256 or sha384 is accepted.", type=str, default=None)
 	return parser.parse_args().__dict__
 

@@ -3,7 +3,7 @@ from cryptography.x509.oid import NameOID
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ed25519,ec
 from cryptography.hazmat.primitives.serialization import load_pem_private_key
 # from getpass import getpass
 
@@ -32,6 +32,16 @@ def csrgen(pkpath = './private.key', outputpath = './', hashalgo=None):
     key = load_pem_private_key(pkraw, password=None)
     if isinstance(key, ed25519.Ed25519PrivateKey):
         _hashalgo = None
+    if isinstance(key, ec.EllipticCurvePrivateKey):
+        if _hashalgo != None:
+            _hashalgo = ec.ECDSA(_hashalgo)
+        else:
+            if isinstance(key.curve, ec.SECP256R1):
+                _hashalgo = hashes.SHA256()
+            elif isinstance(key.curve, ec.SECP384R1):
+                _hashalgo = hashes.SHA384()
+            else:
+                print("unsupport private key type: ", key.curve.name)
 
     prefix = input('your prefix [IMPORTANT]: ')
     country_name = input('2 character country code: ')

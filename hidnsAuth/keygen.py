@@ -4,7 +4,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.hazmat.primitives.asymmetric import ec
 # from getpass import getpass
 
-def keygen(outputpath='./', type='secp384r1'):
+def keygen(outputpath='./', type='secp256r1'):
     if type == 'rsa':
         key = generate_private_key(
             public_exponent=65537,
@@ -12,6 +12,8 @@ def keygen(outputpath='./', type='secp384r1'):
         )
     elif type == 'ed25519':
         key = Ed25519PrivateKey.generate()
+    elif type == 'secp256r1':
+        key = ec.generate_private_key(ec.SECP256R1())
     elif type == 'secp384r1':
         key = ec.generate_private_key(ec.SECP384R1())
     else:

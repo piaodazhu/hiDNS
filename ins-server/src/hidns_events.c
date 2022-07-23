@@ -502,7 +502,7 @@ int hidns_localctx_send(void *arg)
 		type = INS_T_TXT;
 	}
 	else {
-		snprintf(dnbuf, INS_PFXMAXSIZE, "_hadmin.%s", ctx->dname_buf + ctx->dname_ptr);
+		snprintf(dnbuf, INS_PFXMAXSIZE, "%s", ctx->dname_buf + ctx->dname_ptr);
 		type = qbuf->header.qtype;
 	}
 	len = res_mkquery(QUERY, dnbuf, C_IN, type, NULL, 0, NULL, dnsbuf, INS_UDPMAXSIZE);

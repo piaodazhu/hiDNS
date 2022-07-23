@@ -1,3 +1,4 @@
+from enum import Flag
 import selectors
 import socket
 import time
@@ -15,7 +16,7 @@ from cryptography.x509 import load_pem_x509_certificate
 from cryptography.x509 import load_der_x509_certificate
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
-from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ed25519,ec
 
 # a signature validator with Trust Chain walking
 # Input: a verify request
@@ -30,7 +31,7 @@ LOCAL_SERVICE_ADDR = ('127.0.0.1', 5551)
 HOD_PROXY_ADDR = ('127.0.0.1', 5556)
 
 
-Hidns_Over_DTLS = True
+Hidns_Over_DTLS = False
 def send_hidns_query(sock:socket.socket, query:hidnsmsgformat.hiDNSQuery):
     if Hidns_Over_DTLS == True:
         query.od = 1
@@ -118,6 +119,12 @@ def verifycert(public_key, cert_to_check):
                     padding.PKCS1v15(),
                     cert_to_check.signature_hash_algorithm
                 )
+        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+            public_key.verify(
+                cert_to_check.signature,
+                cert_to_check.tbs_certificate_bytes,
+                ec.ECDSA(cert_to_check.signature_hash_algorithm)
+            )
         else:
             return False
         return True
@@ -126,6 +133,31 @@ def verifycert(public_key, cert_to_check):
 
 def verifymsg(public_key, sig_to_check, msg_to_check, hash_algo=None):
     try:
+        if isinstance(public_key, ed25519.Ed25519PublicKey):
+            public_key.verify(
+                sig_to_check,
+                msg_to_check
+            )
+        elif isinstance(public_key, rsa.RSAPublicKey):
+            public_key.verify(
+                    sig_to_check,
+                    msg_to_check,
+                    padding.PSS(
+                        mgf=padding.MGF1(hash_algo),
+                        salt_length=padding.PSS.MAX_LENGTH
+                    ),
+                    hash_algo
+                )
+        elif isinstance(public_key, ec.EllipticCurvePublicKey):
+            public_key.verify(
+                sig_to_check,
+                msg_to_check,
+                ec.ECDSA(hash_algo)
+            )
+        else:
+            return False
+        return True
+
         if hash_algo == None:
             public_key.verify(
                 sig_to_check,
@@ -167,6 +199,12 @@ def msgverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, cl
         elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA384RSA:
             request._sig = arg.value
             request._hashalgo = hashes.SHA384()
+        elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA256SECP256R1:
+            request._sig = arg.value
+            request._hashalgo = ec.ECDSA(hashes.SHA256()) 
+        elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA384SECP384R1:
+            request._sig = arg.value
+            request._hashalgo = ec.ECDSA(hashes.SHA384())
     
     if len(request._tbs) == 0 or len(request._signer) == 0 or len(request._sig) == 0:
         return False
@@ -232,7 +270,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         return False
     
     # check done, load the signer's certificate
-    # print("[TAG] C-1")
+    print("[TAG] C-1")
     try:
         if request._certformat == verifymsgformat.REQ_ARGTYPE_CERT_PEM:
             cert = load_pem_x509_certificate(request._cert)
@@ -241,7 +279,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         else:
             cert = load_der_x509_certificate(request._cert)
     except:
-        # print("[TAG] C-2")
+        print("[TAG] C-2")
         reply = verifymsgformat.VerifyReply(request, verifymsgformat.REPLY_RCODE_CERT_INVALID)
         sock.sendto(reply.make_reply(), clientaddr)
         return True
@@ -254,7 +292,9 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
     # need fetch next cert?
     if subjectprefix in certstorage:
         print("hit ", subjectprefix)
-        if certstorage[issuerprefix].public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo) == cert.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo):
+        # print(certstorage[issuerprefix].public_bytes(encoding=serialization.Encoding.PEM))
+        # print(cert.public_bytes(encoding=serialization.Encoding.PEM))
+        if certstorage[subjectprefix].public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo) == cert.public_key().public_bytes(encoding=serialization.Encoding.DER, format=serialization.PublicFormat.SubjectPublicKeyInfo):
             rcode = verifymsgformat.REPLY_RCODE_OK
         else:
             rcode = verifymsgformat.REPLY_RCODE_CERT_INVALID
@@ -262,7 +302,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         sock.sendto(reply.make_reply(), clientaddr)
         return True
     
-    # print("[TAG] C-3")
+    print("[TAG] C-3")
     # root? self-signed? avoid loop
     if subjectprefix.startswith(issuerprefix) == False:
         # failed
@@ -297,7 +337,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         reply = verifymsgformat.VerifyReply(request, rcode)
         sock.sendto(reply.make_reply(), clientaddr)
         return True
-    # print("[TAG] C-4")
+    print("[TAG] C-4")
     # print(rootkey)
     # newctx.currentcert = cert
     # need fetch issuer's cert
@@ -342,6 +382,12 @@ def cmdverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, cl
         elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA384RSA:
             request._sig = arg.value
             request._hashalgo = hashes.SHA384()
+        elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA256SECP256R1:
+            request._sig = arg.value
+            request._hashalgo = ec.ECDSA(hashes.SHA256()) 
+        elif arg.type == verifymsgformat.REQ_ARGTYPE_SIG_SHA384SECP384R1:
+            request._sig = arg.value
+            request._hashalgo = ec.ECDSA(hashes.SHA384())
         elif arg.type == verifymsgformat.REQ_ARGTYPE_CERT_DERB64:
             request._cert = arg.value
             request._certformat = verifymsgformat.REQ_ARGTYPE_CERT_DERB64
@@ -365,7 +411,7 @@ def cmdverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, cl
         sock.sendto(reply.make_reply(), clientaddr)
         return True
 
-    if verifymsg(cert.public_key(), request._sig, request._tbs) == False:
+    if verifymsg(cert.public_key(), request._sig, request._tbs, request._hashalgo) == False:
         reply = verifymsgformat.VerifyReply(request, verifymsgformat.REPLY_RCODE_MSG_INVALIDSIG, request._signer)
         sock.sendto(reply.make_reply(), clientaddr)
         return True
@@ -497,7 +543,7 @@ def readcertfromhidns(sock: socket.socket, mask):
         sock.close()
         return
 
-    if verifymsg(cert.public_key(), sig_to_be_verified, msg_to_be_verified) == False:
+    if verifymsg(cert.public_key(), sig_to_be_verified, msg_to_be_verified, ctx.request._hashalgo) == False:
         reply = verifymsgformat.VerifyReply(ctx.request, verifymsgformat.REPLY_RCODE_MSG_INVALIDSIG, ctx.nextissuer)
         ctx.clientfd.sendto(reply.make_reply(), ctx.cliaddr)
         ctxmap.pop(sock)
@@ -625,7 +671,7 @@ def readresponse(sock: socket.socket, mask):
         return
     
     if verifycert(public_key, cert_to_be_verified) == False:
-        reply = verifymsgformat.VerifyReply(ctx.request, verifymsgformat.REPLY_RCODE_CERT_BADSIG, ctx.nextissuer)
+        reply = verifymsgformat.VerifyReply(ctx.request, verifymsgformat.REPLY_RCODE_CERT_INVALID, ctx.nextissuer)
         ctx.clientfd.sendto(reply.make_reply(), ctx.cliaddr)
         ctxmap.pop(sock)
         sel.unregister(sock)
@@ -675,7 +721,7 @@ def readresponse(sock: socket.socket, mask):
     query = hidnsmsgformat.hiDNSQuery(issuerprefix, 
         issuerprefix.count('/') - 1,
         issuerprefix.count('/') - 1, 
-        hidnsmsgformat.RR_TYPE_TXT)
+        hidnsmsgformat.RR_TYPE_CERT)
     # sock.sendto(query.make_query(), HIDNS_SERVER_ADDR)
     send_hidns_query(sock, query)
 

@@ -114,3 +114,41 @@ int verify_hidns_x509_cert(const unsigned char* certbuf, int certbuflen, unsigne
 	}
 	return 0;
 }
+
+int verify_hidns_nocert_cmd(const unsigned char* tbsbuf, int tbslen, const unsigned char* signerbuf, int signerlen, const unsigned char* sigbuf, int siglen, unsigned char algorithm)
+{
+	// prefix relationship check
+	verifyreq_buf vrbuf;
+	verifyans_buf vabuf;
+	int rlen, fd, ret;
+	rlen = make_hidns_verify_request_msg2(&vrbuf, INS_UDPMAXSIZE, tbsbuf, tbslen, signerbuf, signerlen, sigbuf, siglen, algorithm);
+	if (rlen <= 0) {
+		return -3;
+	}
+	// for debuf
+	// printf("[TAG] request message formed. len = %d\n", rlen);
+	// FILE *p = fopen("./signature.bin","wb");
+	// fwrite(vrbuf.buf, 1, rlen, p);
+	// fclose(p);
+	//
+	fd = verify_open_udp_socket("127.0.0.1", 5551);
+	// send message to validator
+	ret = send(fd, vrbuf.buf, rlen, 0);
+	if (ret != rlen) {
+		return 1;
+	}
+	// printf("[TAG] verify request is sent\n");
+	ret = recv(fd, vabuf.buf, INS_UDPMAXSIZE, 0);
+	if (ret < VERIFYANS_FIXLEN) {
+		return 2;
+	}
+	// printf("[TAG] verify answer is received! rcode=%d\n", vabuf.header.rcode);
+	// parse result
+	if (vabuf.header.id != vrbuf.header.id) {
+		return 3;
+	}
+	if (vabuf.header.rcode != VERIFY_ANS_RCODE_OK) {
+		return -4;
+	}
+	return 0;
+}

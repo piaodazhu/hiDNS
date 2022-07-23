@@ -15,4 +15,7 @@ verify_hidns_resolv_ans(hidns_resolv_ans_t *ans);
 int 
 verify_hidns_x509_cert(const unsigned char* certbuf, int certbuflen, unsigned char certargtype);
 
+int
+verify_hidns_nocert_cmd(const unsigned char* tbsbuf, int tbslen, const unsigned char* signerbuf, int signerlen, const unsigned char* sigbuf, int siglen, unsigned char algorithm);
+
 #endif

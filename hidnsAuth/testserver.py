@@ -12,29 +12,29 @@ LOCAL_SERVICE_ADDR = ('127.0.0.1', 5551)
 sock = socket.socket(type = socket.SOCK_DGRAM)
 
 # cert verify protocol
-# request = verifymsgformat.VerifyRequest(protocol=verifymsgformat.REQ_PROTOCOL_CERT)
-# with open('icn_bit/cert.pem', 'rb') as f:
-# 	rawcert = f.read()
-# request.add_pem_certificate(rawcert)
-# sock.sendto(request.make_request(), LOCAL_SERVICE_ADDR)
-
-# reply = verifymsgformat.VerifyReply()
-# reply.parse_reply(sock.recv(2048))
-# print(reply.rcode)
-
-# msg verify protocol 
-request = verifymsgformat.VerifyRequest(protocol=verifymsgformat.REQ_PROTOCOL_MSG)
-with open('testmsg/msg', 'rb') as f:
-	request.add_data_tbs(f.read())
-with open('testmsg/signature', 'rb') as f:
-	request.add_signature_ed25519(f.read())
-request.add_signer_prefix(b'/icn/bit/')
-
+request = verifymsgformat.VerifyRequest(protocol=verifymsgformat.REQ_PROTOCOL_CERT)
+with open('ec/icn_bit_lab101/cert.pem', 'rb') as f:
+	rawcert = f.read()
+request.add_pem_certificate(rawcert)
 sock.sendto(request.make_request(), LOCAL_SERVICE_ADDR)
 
 reply = verifymsgformat.VerifyReply()
 reply.parse_reply(sock.recv(2048))
 print(reply.rcode)
+
+# msg verify protocol 
+# request = verifymsgformat.VerifyRequest(protocol=verifymsgformat.REQ_PROTOCOL_MSG)
+# with open('testmsg/msg', 'rb') as f:
+# 	request.add_data_tbs(f.read())
+# with open('testmsg/signature', 'rb') as f:
+# 	request.add_signature_ed25519(f.read())
+# request.add_signer_prefix(b'/icn/bit/')
+
+# sock.sendto(request.make_request(), LOCAL_SERVICE_ADDR)
+
+# reply = verifymsgformat.VerifyReply()
+# reply.parse_reply(sock.recv(2048))
+# print(reply.rcode)
 
 
 # with open('cert.pem', 'rb') as f:

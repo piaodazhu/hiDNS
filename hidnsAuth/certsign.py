@@ -2,6 +2,7 @@ from cryptography import x509
 from cryptography.hazmat.primitives import hashes
 from cryptography.hazmat.primitives.asymmetric import rsa
 from cryptography.hazmat.primitives.asymmetric import ed25519
+from cryptography.hazmat.primitives.asymmetric import ec
 from cryptography.x509.oid import NameOID
 import datetime
 from cryptography.hazmat.primitives import serialization
@@ -32,6 +33,16 @@ def certsign(pkpath='./private.key', csrpath='./csr.pem', outputpath='./', hasha
     private_key = load_pem_private_key(pkraw, password=None)
     if isinstance(private_key, ed25519.Ed25519PrivateKey):
         _hashalgo = None
+    if isinstance(private_key, ec.EllipticCurvePrivateKey):
+        if _hashalgo != None:
+            _hashalgo = ec.ECDSA(_hashalgo)
+        else:
+            if isinstance(private_key.curve, ec.SECP256R1):
+                _hashalgo = hashes.SHA256()
+            elif isinstance(private_key.curve, ec.SECP384R1):
+                _hashalgo = hashes.SHA384()
+            else:
+                print("unsupport private key type: ", private_key.curve.name)
 
     with open(csrpath, 'rb') as f:
         pem_req_data = f.read()
@@ -78,8 +89,9 @@ def certsign(pkpath='./private.key', csrpath='./csr.pem', outputpath='./', hasha
     builder = builder.add_extension(
         x509.BasicConstraints(ca=True, path_length=10), critical=True,
     )
+
     certificate = builder.sign(
-        private_key=private_key, algorithm=_hashalgo,
+        private_key=private_key, algorithm=hashes.SHA256(),
     )
 
     with open(outputpath + '/' + "cert.pem", 'wb') as f:

@@ -27,6 +27,8 @@ REQ_ARGTYPE_SIG_SHA1RSA = 22
 REQ_ARGTYPE_SIG_SHA224RSA = 23
 REQ_ARGTYPE_SIG_SHA256RSA = 24
 REQ_ARGTYPE_SIG_SHA384RSA = 25
+REQ_ARGTYPE_SIG_SHA256SECP256R1 = 26
+REQ_ARGTYPE_SIG_SHA384SECP384R1 = 27
 
 # message verify protocol: verify a signed message. The body should include to-be-signed message, signer and signature.
 # certificate verify protocol: verify a certificate. The body should include certificate.

@@ -267,6 +267,12 @@ make_hidns_verify_request_msg2(verifyreq_buf *reqbuf, int reqbufsize, const unsi
 	case HIDNS_ALGO_ED25519: 
 		*ptr = VERIFY_REQ_ARGTYPE_SIG_ED25519;
 		break;
+	case HIDNS_ALGO_ECDSAP256SHA256: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA256SECP256R1;
+		break;
+	case HIDNS_ALGO_ECDSAP384SHA384: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA384SECP384R1;
+		break;
 	default: break;
 	}
 	ptr++;

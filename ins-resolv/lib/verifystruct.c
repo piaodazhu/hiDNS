@@ -222,6 +222,70 @@ make_hidns_verify_request_msg(verifyreq_buf *reqbuf, int reqbufsize, const hidns
 }
 
 int
+make_hidns_verify_request_msg2(verifyreq_buf *reqbuf, int reqbufsize, const unsigned char* tbsbuf, int tbslen, const unsigned char* signerbuf, int signerlen, const unsigned char* sigbuf, int siglen, unsigned char algorithm)
+{
+	if (reqbufsize < VERIFYREQ_FIXLEN + 3 * VERIFYARG_FIXLEN + tbslen + signerlen + siglen)
+		return 0;
+	
+	struct timeval tv;
+	unsigned short arglen1 = tbslen, arglen2 = signerlen, arglen3 = siglen;
+	unsigned short arglen1_n, arglen2_n, arglen3_n;
+	gettimeofday(&tv, NULL);
+	reqbuf->header.id = tv.tv_usec & 0xffff;
+	reqbuf->header.version = VERIFY_VERSION_0;
+	reqbuf->header.protocol = VERIFY_PROTOCOL_MSG;
+	reqbuf->header.options = VERIFY_REQ_OPTIONS_NONE;
+	
+	unsigned char* ptr = reqbuf->buf + VERIFYREQ_FIXLEN;
+	
+	// 1. add tbs argument
+	*ptr = VERIFY_REQ_ARGTYPE_TBS;
+	ptr++;
+	arglen1_n = htons(arglen1);
+	memcpy(ptr, &arglen1_n, 2);
+	ptr += 2;
+	memcpy(ptr, tbsbuf, arglen1);
+	ptr += arglen1;
+
+	// 2. add signer argument
+	*ptr = VERIFY_REQ_ARGTYPE_SIGNER_PREFIX;
+	ptr++;
+	arglen2_n = htons(arglen2);
+	memcpy(ptr, &arglen2_n, 2);
+	ptr += 2;
+	memcpy(ptr, signerbuf, arglen2);
+	ptr += arglen2;
+
+	// 3. add signature
+	switch (algorithm) {
+	case HIDNS_ALGO_RSASHA1: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA1RSA;
+		break;
+	case HIDNS_ALGO_RSASHA256: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA256RSA;
+		break;
+	case HIDNS_ALGO_ED25519: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_ED25519;
+		break;
+	case HIDNS_ALGO_ECDSAP256SHA256: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA256SECP256R1;
+		break;
+	case HIDNS_ALGO_ECDSAP384SHA384: 
+		*ptr = VERIFY_REQ_ARGTYPE_SIG_SHA384SECP384R1;
+		break;
+	default: break;
+	}
+	ptr++;
+	arglen3_n = htons(arglen3);
+	memcpy(ptr, &arglen3_n, 2);
+	ptr += 2;
+	memcpy(ptr, sigbuf, arglen3);
+	ptr += arglen3;
+	
+	return ptr - reqbuf->buf; 
+}
+
+int
 make_hidns_verify_request_cert(verifyreq_buf *reqbuf, int reqbufsize, const hidns_resolv_ans_t *ans)
 {
 	// check bound?

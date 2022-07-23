@@ -86,6 +86,8 @@ typedef struct {
 
 #define HIDNS_ALGO_RSASHA1	5
 #define HIDNS_ALGO_RSASHA256	8
+#define HIDNS_ALGO_ECDSAP256SHA256	13	
+#define HIDNS_ALGO_ECDSAP384SHA384	14
 #define HIDNS_ALGO_ED25519	15
 
 int signature_parse(hidns_update_signature* sig, unsigned char *ptr, int len);
