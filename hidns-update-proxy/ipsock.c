@@ -24,7 +24,7 @@ int Listen(int sockfd, int backlog)
 	return ret;
 }
 
-int Accept(int sockfd,struct sockaddr *addr, socklen_t *addrlen)//慢速系统调用
+int Accept(int sockfd,struct sockaddr *addr, socklen_t *addrlen)
 {
 	int ret;
 again:

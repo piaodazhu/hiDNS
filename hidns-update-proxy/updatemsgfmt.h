@@ -92,7 +92,7 @@ int signature_parse(hidns_update_signature* sig, unsigned char *ptr, int len);
 
 
 // B. rcode
-typedef unsigned char hidns_update_rcode;
+typedef char hidns_update_rcode;
 
 #define RCODE_FIXLEN	1
 #define RCODE_TYPEID	0x6
@@ -133,6 +133,7 @@ typedef struct hidns_update_msg hidns_update_msg;
 #define MSG_MEMBER_MAP_ARGS	0b10000
 #define MSG_MEMBER_MAP_RCODE	0b100000
 
+void updatemsg_init(hidns_update_msg* msg);
 int updatemsg_parse(hidns_update_msg* msg);
 int updatemsg_append_command(hidns_update_msg* msg, hidns_update_command* cmd);
 int updatemsg_append_signature(hidns_update_msg* msg, hidns_update_signature* sig);

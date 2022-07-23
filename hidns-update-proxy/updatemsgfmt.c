@@ -1,5 +1,14 @@
 #include "updatemsgfmt.h"
 
+void updatemsg_init(hidns_update_msg* msg)
+{
+	if (msg == NULL) return;
+	msg->_membermap = 0;
+	msg->_tbslen = 0;
+	msg->len_n = 0;
+	msg->rawbuflen = sizeof(msg->len_n);
+}
+
 // parse command
 int
 updatemsg_parse(hidns_update_msg* msg)

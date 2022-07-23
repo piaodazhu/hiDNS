@@ -349,142 +349,44 @@ check_updatemsg_ismatch(hidns_update_msg *request, hidns_update_msg *reply)
     return 1;
 }
 
-//私钥签名
-// base64 编码
-char *base64_encode(const char *buffer, int length) {
-    BIO *bmem = NULL;
-    BIO *b64 = NULL;
-    BUF_MEM *bptr;
-    char *buff = NULL;
-    
-    b64 = BIO_new(BIO_f_base64());
-    BIO_set_flags(b64, BIO_FLAGS_BASE64_NO_NL);
-    bmem = BIO_new(BIO_s_mem());
-    b64 = BIO_push(b64, bmem);
-    BIO_write(b64, buffer, length);
-    BIO_flush(b64);
-    BIO_get_mem_ptr(b64, &bptr);
-    BIO_set_close(b64, BIO_NOCLOSE);
+// int main()
+// {
+// 	// test_sign("helloworld", strlen("helloworld"), "./curveprivate.key");
+//     load_userkeypair("dns.key", "dns.crt", 0, 14, &keypairhead);
+//     load_userkeypair("dns.key", "dns.crt", 2, 14, &keypairhead);
+//     load_userkeypair("dns.key", "dns.crt", 0, 14, &keypairhead);
+//     userkeypair *ptr = keypairhead;
+//     while (ptr != NULL) {
+//         printf("keytag=%d, subjectlen=%d, cerlen=%d\n", ptr->keytag, ptr->subjectlen, ptr->certlen);
+//         ptr = ptr->next;
+//     }
 
-    buff = (char *)malloc(bptr->length + 1);
-    memcpy(buff, bptr->data, bptr->length);
-    buff[bptr->length] = 0;
-    BIO_free_all(b64);
-
-    return buff;
-}
-
-int test_sign(const char *input, int input_len, const char *pri_key_fn)
-{
-    EC_KEY *p_dsa = NULL;
-    FILE *file = NULL;
-    int signlen = 0;
-    int i = 0;
-    int ret = 0;
-    unsigned char digest[EVP_MAX_MD_SIZE];
-    unsigned int digest_len = 0;
-    unsigned char sig[2048];
-    unsigned int siglen;
-
-    file = fopen(pri_key_fn, "r");
-    if(!file)
-    {
-        ret = -1;
-        return ret;
-    }
-
-    if((p_dsa = PEM_read_ECPrivateKey(file, NULL, NULL, NULL)) == NULL) { // 获取私钥的ec key
-        printf("TAG2\n");
-	ret = -2;
-        fclose(file);
-        return ret;
-    }
-
-    fclose(file);
-
-    EVP_MD_CTX *md_ctx = EVP_MD_CTX_new(); // free?
-    EVP_MD_CTX_init(md_ctx);
-    if (!EVP_DigestInit(md_ctx, EVP_sha256())) {
-        printf("EVP_digest fail \n");
-        ret = -1;
-        goto error_out;
-    }
-    if (!EVP_DigestUpdate(md_ctx, (const void *)input, input_len)) {
-        printf("TAG3\n");
-	printf("EVP_DigestUpdate fail \n");
-        ret = -1;
-        goto error_out;
-    }
-    if (!EVP_DigestFinal(md_ctx, digest, &digest_len)) { // 待签名消息用sha256生成256比特的签名摘要
-        printf("EVP_DigestFinal fail \n");
-        ret = -1;
-        goto error_out;
-    }
-
-    printf("signlen = %ld, digest: %s\n", strlen(digest), digest);
-    
-    if (ECDSA_sign(0, digest, digest_len, sig, &siglen, p_dsa) != 1) {
-        printf("ECDSA_sign fail \n");
-        ret = -1;
-	goto error_out;
-    }
-    printf("ok. siglen = %d\n", siglen);
-    unsigned char* sigbuf = base64_encode(sig, siglen);
-    FILE *log = fopen("./siglog", "wb");
-    fwrite(sigbuf, 1, strlen(sigbuf), log);
-    fclose(log);
-    // s = ECDSA_do_sign(digest, digest_len, p_dsa); // 对签名摘要进行签名得到签名数据s
-    // if(s == NULL) {
-    //     ret = -3;
-    //     EC_KEY_free(p_dsa);
-    //     return ret;
-    // }
-
-error_out:
-    EC_KEY_free(p_dsa);
-    EVP_MD_CTX_free(md_ctx);
-
-    return 0;
-}
-
-int main()
-{
-	// test_sign("helloworld", strlen("helloworld"), "./curveprivate.key");
-    load_userkeypair("dns.key", "dns.crt", 0, 14, &keypairhead);
-    load_userkeypair("dns.key", "dns.crt", 2, 14, &keypairhead);
-    load_userkeypair("dns.key", "dns.crt", 0, 14, &keypairhead);
-    userkeypair *ptr = keypairhead;
-    while (ptr != NULL) {
-        printf("keytag=%d, subjectlen=%d, cerlen=%d\n", ptr->keytag, ptr->subjectlen, ptr->certlen);
-        ptr = ptr->next;
-    }
-
-    hidns_update_command* cmd = updatemsg_new_command();
-    cmd->opcode = COMMAND_OPCODE_ADDRR;
-    cmd->rrtype = COMMAND_RRTYPE_TXT;
-    cmd->rrprefixlen = strlen("/nssec/dns01/user1/");
-    cmd->rrprefixbuf = "/nssec/dns01/user1/";
-    cmd->rrvaluelen = strlen("helloworld");
-    cmd->rrvaluebuf = "helloworld";
-    cmd->rrttl = 86400;
-    hidns_update_signature* sig = sign_rawcommand(cmd, 0, keypairhead);
-    hidns_update_certificate* cert = updatemsg_new_certificate();
-    cert->type = CERTIFICATE_TYPE_X509_DER;
-    cert->length = get_userkeypair(keypairhead, 0)->certlen;
-    cert->valbuf = get_userkeypair(keypairhead, 0)->certbuf;
-    hidns_update_msg* msg = updatemsg_new_message();
-    updatemsg_append_command(msg, cmd);
-    updatemsg_append_signature(msg, sig);
-    updatemsg_append_certificate(msg, cert);
-    // printf("TAG4\n");
-    FILE *f = fopen("dump.bin", "wb");
-    fwrite(msg->rawbuf, 1, msg->rawbuflen, f);
-    fclose(f);
-    hidns_update_msg *rcvmsg = updatemsg_new_message();
-    memcpy(rcvmsg->rawbuf, msg->rawbuf, msg->rawbuflen);
-    updatemsg_parse(rcvmsg);
-    // printf("%.*s\n", msg->sig.signerlen, msg->sig.signerpfx);
-    printf("%u %u %u %u\n", rcvmsg->cmd.rrvaluelen, rcvmsg->cmd.rrttl, rcvmsg->sig.inceptime, rcvmsg->cert.type);
-    printf("ret = %d\n", check_updatemsg_request(rcvmsg));
-	return 0;
-}
+//     hidns_update_command* cmd = updatemsg_new_command();
+//     cmd->opcode = COMMAND_OPCODE_ADDRR;
+//     cmd->rrtype = COMMAND_RRTYPE_TXT;
+//     cmd->rrprefixlen = strlen("/nssec/dns01/user1/");
+//     cmd->rrprefixbuf = "/nssec/dns01/user1/";
+//     cmd->rrvaluelen = strlen("helloworld");
+//     cmd->rrvaluebuf = "helloworld";
+//     cmd->rrttl = 86400;
+//     hidns_update_signature* sig = sign_rawcommand(cmd, 0, keypairhead);
+//     hidns_update_certificate* cert = updatemsg_new_certificate();
+//     cert->type = CERTIFICATE_TYPE_X509_DER;
+//     cert->length = get_userkeypair(keypairhead, 0)->certlen;
+//     cert->valbuf = get_userkeypair(keypairhead, 0)->certbuf;
+//     hidns_update_msg* msg = updatemsg_new_message();
+//     updatemsg_append_command(msg, cmd);
+//     updatemsg_append_signature(msg, sig);
+//     updatemsg_append_certificate(msg, cert);
+//     // printf("TAG4\n");
+//     FILE *f = fopen("dump.bin", "wb");
+//     fwrite(msg->rawbuf, 1, msg->rawbuflen, f);
+//     fclose(f);
+//     hidns_update_msg *rcvmsg = updatemsg_new_message();
+//     memcpy(rcvmsg->rawbuf, msg->rawbuf, msg->rawbuflen);
+//     updatemsg_parse(rcvmsg);
+//     // printf("%.*s\n", msg->sig.signerlen, msg->sig.signerpfx);
+//     printf("%u %u %u %u\n", rcvmsg->cmd.rrvaluelen, rcvmsg->cmd.rrttl, rcvmsg->sig.inceptime, rcvmsg->cert.type);
+//     printf("ret = %d\n", check_updatemsg_request(rcvmsg));
+// 	return 0;
+// }
