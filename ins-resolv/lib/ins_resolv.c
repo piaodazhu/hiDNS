@@ -559,9 +559,6 @@ ins_free_sockaddrlist(struct sockaddr** slist)
 	if (slist != NULL) {
 		struct sockaddr** ptr = slist;
 		while (*ptr != NULL) {
-			struct sockaddr *addr = *(ptr);
-			addr->sa_family == AF_INET;
-			addr->sa_data.
 			free(*ptr);
 			++ptr;
 		}
