@@ -53,6 +53,11 @@ ins_gettxtbyname(const char* name, const char* nameserver,
 			int mincomponentcount, int maxcomponentcount);
 
 
+// name and nameserver must be C string ending with 0
+struct sockaddr**
+ins_getadminbyname(const char* name, const char* nameserver, 
+			int mincomponentcount, int maxcomponentcount);
+
 in_addr_t**
 ins_getaddrbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver, 
 			int mincomponentcount, int maxcomponentcount);
@@ -67,17 +72,18 @@ char**
 ins_gettxtbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver,
 			int mincomponentcount, int maxcomponentcount);
 
+struct sockaddr**
+ins_getadminbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver, 
+			int mincomponentcount, int maxcomponentcount);
+
 //-----------------
 
-void
-ins_free_hostent(struct hostent*);
-
-void
-ins_free_aentry(ins_ans_entry*);
-
-void
-ins_free_addrlist(in_addr_t*);
-
+int  insprefix_count_components(const char* prefix, int plen);
+void ins_free_hostent(struct hostent*);
+void ins_free_aentry(ins_ans_entry*);
+void ins_free_addrlist(in_addr_t**);
+void ins_free_sockaddrlist(struct sockaddr**);
+void ins_free_buflist(char**);
 
 // input query packet and output answer packet from nameserver
 int

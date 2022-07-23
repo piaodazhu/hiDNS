@@ -4,7 +4,7 @@ objects = prproxy.o ipsock.o nipsock.o updatemsgfmt.o updatemsgtools.o verifystr
 all: $(appname)
 
 $(appname): $(objects)
-	gcc -o $@ $(objects) -lssl -lcrypto -lpthread
+	gcc -o $@ $(objects) -lssl -lcrypto -lpthread -lins_resolv
 
 prproxy.o:
 	gcc -c -o $@ prproxy.c

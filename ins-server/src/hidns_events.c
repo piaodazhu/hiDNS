@@ -494,8 +494,18 @@ int hidns_localctx_send(void *arg)
 #endif
 
 	int len;
+	unsigned char type;
+	u_int8_t dnbuf[INS_PFXMAXSIZE];
 	u_int8_t dnsbuf[INS_UDPMAXSIZE];
-	len = res_mkquery(QUERY, ctx->dname_buf + ctx->dname_ptr, C_IN, qbuf->header.qtype, NULL, 0, NULL, dnsbuf, INS_UDPMAXSIZE);
+	if (qbuf->header.qtype == INS_T_HADMIN) {
+		snprintf(dnbuf, INS_PFXMAXSIZE, "_hadmin.%s", ctx->dname_buf + ctx->dname_ptr);
+		type = INS_T_TXT;
+	}
+	else {
+		snprintf(dnbuf, INS_PFXMAXSIZE, "_hadmin.%s", ctx->dname_buf + ctx->dname_ptr);
+		type = qbuf->header.qtype;
+	}
+	len = res_mkquery(QUERY, dnbuf, C_IN, type, NULL, 0, NULL, dnsbuf, INS_UDPMAXSIZE);
 	if (len == -1)
 	{
 		fprintf(stderr, "Failed to create query packet: %s %d\n", ctx->dname_buf + ctx->dname_ptr, qbuf->header.qtype);

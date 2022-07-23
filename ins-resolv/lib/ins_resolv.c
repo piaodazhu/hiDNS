@@ -231,6 +231,18 @@ ins_gettxtbyname(const char* name, const char* nameserver,
 			mincomponentcount, maxcomponentcount);
 }
 
+struct sockaddr**
+ins_getadminbyname(const char* name, const char* nameserver, 
+			int mincomponentcount, int maxcomponentcount)
+{
+	struct sockaddr_in nserver;
+	nserver.sin_family = AF_INET;
+	nserver.sin_port = htons(5553);
+	nserver.sin_addr.s_addr = inet_addr(nameserver);
+	return ins_getadminbyname2(name, strlen(name), &nserver, 
+			mincomponentcount, maxcomponentcount);
+}
+
 in_addr_t**
 ins_getaddrbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver, 
 			int mincomponentcount, int maxcomponentcount)
@@ -241,15 +253,17 @@ ins_getaddrbyname2(const char* name, int nlen, const struct sockaddr_in *nameser
 	int i, len, size = ans->rrsetsize;
 	in_addr_t** addrlist = (in_addr_t**)malloc((size + 1) * sizeof(in_addr_t*));
 	addrlist[size] = NULL;
-	
+	int j = 0;
+
 	for (i = 0; i < size; i++) {
+		addrlist[i] = NULL;
 		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
 		if (len != sizeof(in_addr_t)) {
 			continue;
-		}	
+		}
 		// printf("len = %d\n", len);
-		addrlist[i] = malloc(len);
-		memcpy(addrlist[i], ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len);
+		addrlist[j] = malloc(len);
+		memcpy(addrlist[j++], ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len);
 	}
 	// printf("TAG3\n");
 	free_hidns_resolv_ans(ans);
@@ -290,7 +304,7 @@ ins_gettxtbyname2(const char* name, int nlen, const struct sockaddr_in *nameserv
 	txtlist[size] = NULL;
 	
 	for (i = 0; i < size; i++) {
-		len = get_ins_entry_len(ans->rrset_lst[i]);
+		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
 		// printf("len = %d\n", len);
 		txtlist[i] = malloc(len + 1);
 		txtlist[i][len] = 0;
@@ -299,6 +313,33 @@ ins_gettxtbyname2(const char* name, int nlen, const struct sockaddr_in *nameserv
 	// printf("TAG3\n");
 	free_hidns_resolv_ans(ans);
 	return txtlist;
+}
+
+struct sockaddr**
+ins_getadminbyname2(const char* name, int nlen, const struct sockaddr_in *nameserver, 
+			int mincomponentcount, int maxcomponentcount)
+{
+	hidns_resolv_ans_t *ans = ins_resolv2(name, nlen, nameserver, mincomponentcount, maxcomponentcount, INS_T_HADMIN, RESOLV_FLAG_DEFAULT);
+	if (ans == NULL) return NULL;
+	// printf("TAG2\n");
+	int i, len, size = ans->rrsetsize;
+	struct sockaddr** addrlist = (struct sockaddr**)malloc((size + 1) * sizeof(struct sockaddr*));
+	addrlist[size] = NULL;
+	int j = 0;
+	for (i = 0; i < size; i++) {
+		addrlist[i] = NULL;
+		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
+		// printf("len = %d\n", len);
+		if (BASE64_DECODE_OUT_SIZE(len) > sizeof(struct sockaddr)) {
+			continue;
+		}
+		addrlist[j] = malloc(sizeof(struct sockaddr));
+		memset(addrlist[j], 0, sizeof(struct sockaddr));
+		base64_decode(ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len, (unsigned char*)addrlist[j++]);
+	}
+	// printf("TAG3\n");
+	free_hidns_resolv_ans(ans);
+	return addrlist;
 }
 
 int ins_resolv(const struct sockaddr_in *nameserver,
@@ -500,9 +541,43 @@ ins_free_aentry(ins_ans_entry* aentry)
 }
 
 void
-ins_free_addrlist(in_addr_t* alist)
+ins_free_addrlist(in_addr_t** alist)
 {
 	if (alist != NULL) {
+		in_addr_t** ptr = alist;
+		while (*ptr != NULL) {
+			free(*ptr);
+			++ptr;
+		}
 		free(alist);
+	}
+}
+
+void
+ins_free_sockaddrlist(struct sockaddr** slist)
+{
+	if (slist != NULL) {
+		struct sockaddr** ptr = slist;
+		while (*ptr != NULL) {
+			struct sockaddr *addr = *(ptr);
+			addr->sa_family == AF_INET;
+			addr->sa_data.
+			free(*ptr);
+			++ptr;
+		}
+		free(slist);
+	}
+}
+
+void
+ins_free_buflist(char** blist)
+{
+	if (blist != NULL) {
+		char** ptr = blist;
+		while (*ptr != NULL) {
+			free(*ptr);
+			++ptr;
+		}
+		free(blist);
 	}
 }

@@ -5,6 +5,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <sys/types.h>
+#include <ins_resolv.h>
 #include "nipsock.h"
 #include "ipsock.h"
 #include "updatemsgtools.h"
@@ -71,18 +72,24 @@ int check_register_prefix(char* prefix, int plen)
 
 int find_server(struct sockaddr_in *server, char* prefix, int plen) 
 {
-	// haven't implemented
-	// example: /edu/bit/lab1/news/
-	// 1 lookup news.lab1.bit.edu.
-	// 2 lookup lab1.bit.edu.
-	// 3 lookup bit.edu.
-	// 4 lookup edu.
-
-	// for test:
-	server->sin_family = AF_INET;
-	server->sin_port = htons(REMOTE_PORT);
-	server->sin_addr.s_addr = inet_addr(TEST_DOMAIN_ADMIN);
-	return 0;
+	char buf[INS_PFXMAXSIZE];
+	memcpy(buf, prefix, plen);
+	buf[plen] = 0;
+	
+	struct sockaddr** serverlist = ins_getadminbyname(buf, HIDNS_SERVER_IP, 1, insprefix_count_components(prefix, plen));
+	if (serverlist == NULL ) {
+		return -1;
+	}
+	struct sockaddr** ptr = serverlist;
+	while (*ptr != NULL) {
+		if (*ptr->sa_family == AF_INET) {
+			memcpy((unsigned char*)server, (unsigned char*)(*ptr), sizeof(struct sockaddr_in));
+			ins_free_sockaddrlist(serverlist);
+			return 0;
+		}
+	}
+	ins_free_sockaddrlist(serverlist);
+	return -1;
 }
 
 int main()

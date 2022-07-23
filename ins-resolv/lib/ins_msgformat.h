@@ -18,6 +18,7 @@
 #define INS_T_CERT	T_CERT
 #define INS_T_RRSIG	T_RRSIG
 #define INS_T_HSIG	222
+#define INS_T_HADMIN	223
 
 #define INS_RCODE_OK			0x0	/*%< succeed getting resource record */
 

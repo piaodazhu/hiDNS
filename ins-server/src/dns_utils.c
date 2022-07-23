@@ -97,7 +97,12 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 			break;
 		}
 		}
-
+		
+		// for special type
+		if (ins_abuf->header.qtype == INS_T_HADMIN && aentry.type == INS_T_TXT) {
+			aentry.type = INS_T_HADMIN;
+		}
+		
 		aentrylen = set_ins_ans_entry(dst, bound, &aentry);
 		if (aentrylen < 0) {
 			return -1;
