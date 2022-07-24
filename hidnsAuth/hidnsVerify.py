@@ -1,9 +1,7 @@
-from enum import Flag
 import selectors
 import socket
 import time
 from base64 import b64decode, b64encode
-from wsgiref.util import request_uri
 import hidnsmsgformat
 import verifymsgformat
 from cryptography.hazmat.primitives import serialization
@@ -152,27 +150,10 @@ def verifymsg(public_key, sig_to_check, msg_to_check, hash_algo=None):
             public_key.verify(
                 sig_to_check,
                 msg_to_check,
-                ec.ECDSA(hash_algo)
+                hash_algo
             )
         else:
             return False
-        return True
-
-        if hash_algo == None:
-            public_key.verify(
-                sig_to_check,
-                msg_to_check
-            )
-        else:
-            public_key.verify(
-                sig_to_check,
-                msg_to_check,
-                padding.PSS(
-                    mgf=padding.MGF1(hash_algo),
-                    salt_length=padding.PSS.MAX_LENGTH
-                ),
-                hash_algo
-            )
         return True
     except:
         return False
@@ -270,7 +251,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         return False
     
     # check done, load the signer's certificate
-    print("[TAG] C-1")
+    # print("[TAG] C-1")
     try:
         if request._certformat == verifymsgformat.REQ_ARGTYPE_CERT_PEM:
             cert = load_pem_x509_certificate(request._cert)
@@ -279,7 +260,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         else:
             cert = load_der_x509_certificate(request._cert)
     except:
-        print("[TAG] C-2")
+        # print("[TAG] C-2")
         reply = verifymsgformat.VerifyReply(request, verifymsgformat.REPLY_RCODE_CERT_INVALID)
         sock.sendto(reply.make_reply(), clientaddr)
         return True
@@ -302,7 +283,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         sock.sendto(reply.make_reply(), clientaddr)
         return True
     
-    print("[TAG] C-3")
+    # print("[TAG] C-3")
     # root? self-signed? avoid loop
     if subjectprefix.startswith(issuerprefix) == False:
         # failed
@@ -337,7 +318,7 @@ def certverifytask(request:verifymsgformat.VerifyRequest, sock: socket.socket, c
         reply = verifymsgformat.VerifyReply(request, rcode)
         sock.sendto(reply.make_reply(), clientaddr)
         return True
-    print("[TAG] C-4")
+    # print("[TAG] C-4")
     # print(rootkey)
     # newctx.currentcert = cert
     # need fetch issuer's cert

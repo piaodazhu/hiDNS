@@ -22,6 +22,27 @@ dns_resolve(ins_qry_buf* ins_qbuf, res_state state, unsigned char* domainname,
 	return *dns_abuflen;
 }
 
+int
+dns_assembletxt(const unsigned char *in, unsigned short inlen, unsigned char *out, const unsigned char *bound)
+{
+	if (bound - out < inlen) return 0;
+	unsigned char* dptr = out;
+	const unsigned char* sptr = in;
+	int datalen = 0, actuallen = 0;
+	unsigned char txtlen = 0;
+	while (datalen < inlen) {
+		txtlen = sptr[0];
+		++sptr;
+		memcpy(dptr, sptr, txtlen);
+		dptr += txtlen;
+		sptr += txtlen;
+		++datalen;
+		datalen += txtlen;
+		actuallen += txtlen;
+	}
+	return actuallen;
+}
+
 int 
 dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 		answerbuf_t* dns_abuf, int dns_abuflen)
@@ -40,6 +61,7 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 	unsigned char* end = dns_abuf->buf + dns_abuflen;
 	int i, n;
 	char fullname[INS_PFXMAXSIZE];
+	char txtbuf[INS_BUFMAXSIZE];
 	n = ntohs(dns_abuf->header.qdcount);
 	// first, walk through all the query
 	while (n-- > 0) {
@@ -86,7 +108,11 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 			break;
 		}
 		case INS_T_SOA: 
-		case INS_T_TXT:
+		case INS_T_TXT: {
+			aentry.length = dns_assembletxt(ptr, rrdlen, txtbuf, txtbuf + INS_BUFMAXSIZE);
+			aentry.value = txtbuf;
+			break;
+		}
 		case INS_T_CERT:
 		case INS_T_RRSIG: {
 			aentry.value = ptr;
@@ -102,7 +128,6 @@ dns_parse(ins_ans_buf* ins_abuf, unsigned char* bound,
 		if (ins_abuf->header.qtype == INS_T_HADMIN && aentry.type == INS_T_TXT) {
 			aentry.type = INS_T_HADMIN;
 		}
-		
 		aentrylen = set_ins_ans_entry(dst, bound, &aentry);
 		if (aentrylen < 0) {
 			return -1;

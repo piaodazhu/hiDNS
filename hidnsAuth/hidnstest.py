@@ -5,11 +5,13 @@ from base64 import b64encode
 # import datetime
 import time
 import math
+from cryptography.hazmat.primitives.asymmetric import ed25519,ec
+from cryptography.hazmat.primitives import hashes
 
 HIDNS_SERVER_ADDR = ('127.0.0.1', 5553)
 name = "/icn/bit/txt/xxx"
 
-query = hidnsmsgformat.hiDNSQuery(name, 2, 3, hidnsmsgformat.RR_TYPE_TXT)
+query = hidnsmsgformat.hiDNSQuery(name, 2, 3, hidnsmsgformat.RR_TYPE_HADMIN)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.sendto(query.make_query(), HIDNS_SERVER_ADDR)
 buf = sock.recv(2048)
@@ -29,23 +31,26 @@ for c in components:
 
 # print("domain name is ", dn)
 msg = answer.sort_and_dump_tbs()
-with open('./icn_bit/private.key', 'rb') as f:
+print(msg)
+with open('./ec/icn_bit/private.key', 'rb') as f:
 	key = load_pem_private_key(f.read(), password=None)
-sigbuf = key.sign(msg)
-with open('signature', 'wb') as f:
-	f.write(b64encode(sigbuf))
+sigbuf = key.sign(msg, ec.ECDSA(hashes.SHA256()))
+print(key.public_key().public_numbers())
+print(sigbuf)
+# with open('signature', 'wb') as f:
+# 	f.write(b64encode(sigbuf))
 
-with open('sig_log1', 'wb') as f:
-	f.write(sigbuf)
+# with open('sig_log1', 'wb') as f:
+# 	f.write(sigbuf)
 
-with open('msg_log1', 'wb') as f:
-	f.write(msg)
+# with open('msg_log1', 'wb') as f:
+# 	f.write(msg)
 
 
 now = math.floor(time.time())
 signer = b'/icn/bit/'
 afteronemonth = now + 3600 * 24 * 30 * 1
-hsig = hidnsmsgformat.hiDNSHsig(expirtime=afteronemonth, inceptime=now, signer=signer, signature=sigbuf)
+hsig = hidnsmsgformat.hiDNSHsig(expirtime=afteronemonth, inceptime=now, signer=signer, signature=sigbuf, algorithm=13)
 with open('hsig.txt', 'wb') as f:
 	f.write(b64encode(hsig.make_hsig()))
 

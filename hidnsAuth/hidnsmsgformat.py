@@ -11,6 +11,8 @@ RR_TYPE_SOA = 6
 RR_TYPE_TXT = 16
 RR_TYPE_CERT = 37
 RR_TYPE_RRSIG = 46
+RR_TYPE_HSIG = 222
+RR_TYPE_HADMIN = 223
 
 aentryfmt = 'uint:32, uint:8, uint:8, uint:16, bytes'
 queryfmt = 'uint:32, 8*uint:1, 4*uint:4, 2*uint:8, bytes'
@@ -163,7 +165,7 @@ class hiDNSAnswer():
 
 # ====== for cert =======
 certvalfmt = '2*uint:16, uint:8, bytes'
-algomap = {5:'SHA1RSA', 8: 'SHA256RSA', 15: 'ED25519'}
+algomap = {5:'SHA1RSA', 8: 'SHA256RSA', 13: 'ECDSAP256SHA256', 14:'ECDSAP384SHA384', 15: 'ED25519'}
 class hiDNSCert():
 	fixHeadersize = 5
 	def __init__(self, value:bytes=b''):
@@ -185,26 +187,26 @@ class hiDNSCert():
 		return algomap.get(self.algo)
 
 # ====== for signature =======
-hsigvalfmt = 'uint:16, uint:8, 2*uint:32, uint:8, uint:16, bytes'
+hsigvalfmt = 'uint:16, uint:8, uint:8, 2*uint:32, uint:16, bytes'
 class hiDNSHsig():
 	fixHeadersize = 14
 	def __init__(self, sigkeytag:int=1, algorithm:int=15, expirtime:int=0, inceptime:int=0, signer:bytes=b'', signature:bytes=b''):
 		self.sigkeytag = sigkeytag
 		self.algorithm = algorithm
+		self.signerlen = len(signer)
 		self.expirtime = expirtime
 		self.inceptime = inceptime
-		self.signerlen = len(signer)
 		self.sigbuflen = len(signature)
 		self.signerbuf = signer
 		self.signature = signature
 
 	def make_hsig(self) -> bytes:
-		hsig = bitstring.pack(hsigvalfmt, self.sigkeytag, self.algorithm, self.expirtime, self.inceptime, self.signerlen, self.sigbuflen, self.signerbuf + self.signature)
+		hsig = bitstring.pack(hsigvalfmt, self.sigkeytag, self.algorithm, self.signerlen, self.expirtime, self.inceptime, self.sigbuflen, self.signerbuf + self.signature)
 		return hsig.bytes
 
 	def parse_hsig(self, buf) -> int:
 		hsig = bitstring.BitStream(buf)
-		self.sigkeytag, self.algorithm, self.expirtime, self.inceptime, self.signerlen, self.sigbuflen, remains = hsig.unpack(hsigvalfmt)
+		self.sigkeytag, self.signerlen, self.algorithm, self.expirtime, self.inceptime, self.sigbuflen, remains = hsig.unpack(hsigvalfmt)
 		if len(remains) != self.signerlen + self.sigbuflen:
 			print("parse hsig error")
 			return 0

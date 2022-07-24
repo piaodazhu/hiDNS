@@ -486,7 +486,9 @@ ins_resolv2(const char* name, int nlen, const struct sockaddr_in *nameserver,
 		((flags & RESOLV_FLAG_TRUST_AD) != 0 && abuf.header.ad == 0)) {
 		// TBD: do verify
 		// if not valid, return NULL
+		// printf("[TAG] do verify\n");
 		if (verify_hidns_resolv_ans(ans) != 0) {
+			// printf("[TAG] verify failed\n");
 			free_hidns_resolv_ans(ans);
 			return NULL;
 		}

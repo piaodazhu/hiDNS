@@ -67,29 +67,31 @@ set_ins_ans_entry(unsigned char* ptr, unsigned char* bound, ins_ans_entry* entry
 	memcpy(ptr, &length, 2);
 	ptr += 2;
 
-	// reassemble txt string
-	if (entry->type == INS_T_TXT) {
-		unsigned char* dptr = ptr;
-		unsigned char* sptr = entry->value;
-		int datalen = 0, actuallen = 0;
-		unsigned char txtlen = 0;
-		while (datalen < entry->length) {
-			txtlen = sptr[0];
-			++sptr;
-			memcpy(dptr, sptr, txtlen);
-			dptr += txtlen;
-			sptr += txtlen;
-			++datalen;
-			datalen += txtlen;
-			actuallen += txtlen;
-		}
-		entry->length = actuallen;
-		length = htons(entry->length);
-		memcpy(ptr - 2, &length, 2);
-	}
-	else
-		memcpy(ptr, entry->value, entry->length);
-
+	// // reassemble txt string
+	// if (entry->type == INS_T_TXT || entry->type == INS_T_HSIG || entry->type == INS_T_HADMIN )  {
+	// 	unsigned char* dptr = ptr;
+	// 	unsigned char* sptr = entry->value;
+	// 	int datalen = 0, actuallen = 0;
+	// 	unsigned char txtlen = 0;
+	// 	printf("vallen=%d\n", entry->length);
+	// 	while (datalen < entry->length) {
+	// 		txtlen = sptr[0];
+	// 		printf("txtlen=%d\n", txtlen);
+	// 		++sptr;
+	// 		memcpy(dptr, sptr, txtlen);
+	// 		dptr += txtlen;
+	// 		sptr += txtlen;
+	// 		++datalen;
+	// 		datalen += txtlen;
+	// 		actuallen += txtlen;
+	// 	}
+	// 	entry->length = actuallen;
+	// 	length = htons(entry->length);
+	// 	memcpy(ptr - 2, &length, 2);
+	// }
+	// else
+	// 	memcpy(ptr, entry->value, entry->length);
+	memcpy(ptr, entry->value, entry->length);
 	return 8 + entry->length;
 }
 
