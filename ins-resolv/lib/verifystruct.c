@@ -87,7 +87,10 @@ new_hidns_signature_st(const char* buf, int len)
 	decode_out = malloc(BASE64_DECODE_OUT_SIZE(len));
 	decode_len = base64_decode(buf, len, decode_out);
 	printf("%d\n",decode_len);
-	if (decode_len < SIGNATURE_ST_FIXLEN) return NULL;
+	if (decode_len < SIGNATURE_ST_FIXLEN) {
+		free(decode_out);
+		return NULL;
+	}
 	hidns_signature_st_t* signature = (hidns_signature_st_t*) malloc(sizeof(hidns_signature_st_t));
 
 	unsigned char* ptr = decode_out;

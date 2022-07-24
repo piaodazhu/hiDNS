@@ -326,16 +326,21 @@ ins_getadminbyname2(const char* name, int nlen, const struct sockaddr_in *namese
 	struct sockaddr** addrlist = (struct sockaddr**)malloc((size + 1) * sizeof(struct sockaddr*));
 	addrlist[size] = NULL;
 	int j = 0;
+	unsigned char sockbuf[2 * sizeof(struct sockaddr)];
+	unsigned char socklen;
 	for (i = 0; i < size; i++) {
 		addrlist[i] = NULL;
 		len = get_ins_entry_len(ans->rrset_lst[i] + 2);
 		// printf("len = %d\n", len);
-		if (BASE64_DECODE_OUT_SIZE(len) > sizeof(struct sockaddr)) {
+		if (BASE64_DECODE_OUT_SIZE(len) > 2 * sizeof(struct sockaddr)) {
+			continue;
+		}
+		socklen = base64_decode(ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len, sockbuf);
+		if (sizeof(struct sockaddr) != socklen) {
 			continue;
 		}
 		addrlist[j] = malloc(sizeof(struct sockaddr));
-		memset(addrlist[j], 0, sizeof(struct sockaddr));
-		base64_decode(ans->rrset_lst[i] + 2 + INS_ENTRYFIXLEN, len, (unsigned char*)addrlist[j++]);
+		memcpy(addrlist[j++], sockbuf, socklen);
 	}
 	// printf("TAG3\n");
 	free_hidns_resolv_ans(ans);
