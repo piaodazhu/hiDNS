@@ -27,7 +27,7 @@ struct trienode_queue_item {
 	prefix_trienode_t*	node;
 	trienode_queue_item_t*	next;
 	unsigned int		prefixlen;
-	char			prefixbuf[256]
+	char			prefixbuf[256];
 };
 
 prefix_trie_t* prefix_trie_init(const unsigned char *zonename, unsigned int zlen);
@@ -80,9 +80,5 @@ dumpbuf_t* dumpbuf_new(unsigned int size);
 void dumpbuf_free(dumpbuf_t *dbuf);
 void dumpbuf_dump(const dumpbuf_t *dbuf, const char *filename);
 unsigned int dumpbuf_load(dumpbuf_t *dbuf, const char *filename);
-
-
-
-
 
 #endif

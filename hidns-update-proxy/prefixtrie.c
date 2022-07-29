@@ -4,17 +4,17 @@
 #include "prefixtrie.h"
 
 int
-_get_next_componentlen(const unsigned char *name, int len, int offset)
+_get_next_componentlen(const unsigned char *name, int len, int *offset)
 {
-	if (offset >= len)
+	if (*offset >= len)
 		return 0;
-	if (name[offset] == '/') 
-		++offset;
-	int curpos = offset;
+	if (name[*offset] == '/') 
+		*offset = *offset + 1;
+	int curpos = *offset;
 	while (curpos < len && name[curpos] != '/') {
 		++curpos;
 	}
-	return curpos - offset;
+	return curpos - *offset;
 }
 
 prefix_trie_t*
@@ -65,7 +65,7 @@ prefix_trieqitem_new(const prefix_trienode_t *node,
 	if (node == NULL)
 		return NULL;
 	trienode_queue_item_t *item = (trienode_queue_item_t*) malloc(sizeof(trienode_queue_item_t));
-	item->node = node;
+	item->node = (prefix_trienode_t*)node;
 	item->next = NULL;
 	item->prefixlen = pplen;
 	memcpy(item->prefixbuf, previousprefix, pplen);
@@ -89,11 +89,11 @@ prefix_trienode_get(const prefix_trie_t *root,
 	int idx, clen;
 	prefix_trienode_t *node;
 	idx = root->zoneprefixlen;
-	node = root;
-	while ((clen = _get_next_componentlen(prefix, plen, idx)) != 0) {
+	node = (prefix_trienode_t*)root;
+	while ((clen = _get_next_componentlen(prefix, plen, &idx)) != 0) {
 		node = node->children;
 		while (node != NULL) {
-			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen)) {
+			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen) == 0) {
 				break;
 			}
 			node = node->brother;
@@ -119,14 +119,16 @@ prefix_trienode_put(prefix_trie_t *root,
 	idx = root->zoneprefixlen;
 	node = root;
 	pre = node;
-	while ((clen = _get_next_componentlen(prefix, plen, idx)) != 0) {
+	while ((clen = _get_next_componentlen(prefix, plen, &idx)) != 0) {
 		pre = node;
 		node = node->children;
 		if (node == NULL)
 			goto add_child;
 		while (node != NULL) {
-			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen)) {
+			// printf("node = %.*s <--> curr = %.*s\n", node->componentlen, node->component, clen, prefix + idx);
+			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen) == 0) {
 				++node->_activerecord;
+				// printf("%.*s --> %d\n", clen, prefix + idx, node->_activerecord);
 				break;
 			}
 			pre = node;
@@ -143,7 +145,7 @@ prefix_trienode_put(prefix_trie_t *root,
 	node->hasrecord = 1;
 	return 0;
 add_child:
-	while ((clen = _get_next_componentlen(prefix, plen, idx)) != 0) {
+	while ((clen = _get_next_componentlen(prefix, plen, &idx)) != 0) {
 		pre->children = prefix_trienode_new(prefix + idx, clen);
 		pre = pre->children;
 		idx += clen;
@@ -206,11 +208,11 @@ prefix_trienode_pop(prefix_trie_t *root,
 	idx = root->zoneprefixlen;
 	node = root;
 	pre = node;
-	while ((clen = _get_next_componentlen(prefix, plen, idx)) != 0) {
+	while ((clen = _get_next_componentlen(prefix, plen, &idx)) != 0) {
 		pre = node;
 		node = node->children;
 		while (node != NULL) {
-			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen)) {
+			if (node->componentlen == clen && memcmp(node->component, prefix + idx, clen) == 0) {
 				break;
 			}
 			pre = node;
@@ -264,7 +266,7 @@ prefix_trie_visit(prefix_trie_t *root,
 		void *args), void *arg)
 {
 	trienode_queue_t *qu, *qptr;
-	qu = prefix_trienode_mkqueue(root, NULL, 0);
+	qu = prefix_trienode_mkqueue(root, root->zonename, root->zoneprefixlen);
 	qptr = qu;
 	while (qptr != NULL) {
 		if (cb != NULL)
@@ -279,7 +281,7 @@ void cb_printnode(const prefix_trienode_t *node,
 		void *args)
 {
 	if (node->hasrecord == 1) {
-		printf("prefix: %.*s, activify = %u", plen, prefix, node->_activerecord);
+		printf("prefix: %.*s, activity = %u\n", plen, prefix, node->_activerecord);
 	}
 }
 
@@ -287,12 +289,14 @@ void cb_dumpnode(const prefix_trienode_t *node,
 		const unsigned char *prefix, unsigned int plen,
 		void *args)
 {
-	dumpbuf_t *dbuf = args;
-	if (dbuf->curlen + 1 + plen <= dbuf->totlen) {
-		dbuf->buffer[dbuf->curlen++] = plen;
-		memcpy(dbuf->buffer + dbuf->curlen, prefix, plen);
-		dbuf->curlen +=  plen;
-		++dbuf->totcnt;
+	if (node->hasrecord == 1) {
+		dumpbuf_t *dbuf = args;
+		if (dbuf->curlen + 1 + plen <= dbuf->totlen) {
+			dbuf->buffer[dbuf->curlen++] = plen;
+			memcpy(dbuf->buffer + dbuf->curlen, prefix, plen);
+			dbuf->curlen +=  plen;
+			++dbuf->totcnt;
+		}
 	}
 }
 
@@ -308,7 +312,7 @@ prefix_trie_dump(const prefix_trie_t *root, const char *filename)
 	dbuf->curlen += root->zoneprefixlen;
 
 	// second. save every prefix
-	prefix_trie_visit(root, cb_dumpnode, (void*)dbuf);
+	prefix_trie_visit((prefix_trie_t*)root, cb_dumpnode, (void*)dbuf);
 	unsigned int ret = dbuf->totcnt;
 
 	// third. dump to file
