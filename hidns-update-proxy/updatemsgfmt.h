@@ -142,6 +142,8 @@ int updatemsg_append_signature(hidns_update_msg* msg, hidns_update_signature* si
 int updatemsg_append_addition(hidns_update_msg* msg, hidns_update_addition* addv);
 int updatemsg_append_certificate(hidns_update_msg* msg, hidns_update_certificate* cert);
 int updatemsg_set_rcode(hidns_update_msg* msg, hidns_update_rcode rcode);
+// extract value
+hidns_update_command* updatemsg_extract_command(hidns_update_msg* msg);
 // new value
 hidns_update_msg* updatemsg_new_message();
 hidns_update_command* updatemsg_new_command();

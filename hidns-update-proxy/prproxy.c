@@ -217,7 +217,7 @@ int main()
 				add.valbuf = LOCAL_IGATE_IP;
 				updatemsg_append_addition(&request, &add);
 			}
-			write(ipsock, request.rawbuf, request.rawbuflen);
+			Write(ipsock, request.rawbuf, request.rawbuflen);
 			int valid_reply = 0;
 			if (Read(ipsock, reply.rawbuf, sizeof(reply.len_n)) == sizeof(reply.len_n)) {
 				unsigned short len = ntohs(reply.len_n);

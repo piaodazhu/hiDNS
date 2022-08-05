@@ -1,12 +1,12 @@
 #ifndef HIDNS_VERIFY_SYNC_H
 #define HIDNS_VERIFY_SYNC_H
 
-#include "ins_ipsock.h"
+// #include "ins_ipsock.h"
 #include "verifystruct.h"
 
 
-int 
-verify_open_udp_socket(const char* validator_ip, unsigned short validator_port);
+// int 
+// verify_open_udp_socket(const char* validator_ip, unsigned short validator_port);
 
 // // verify the answer. return 0 if OK.
 int 

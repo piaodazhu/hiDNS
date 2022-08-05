@@ -9,7 +9,7 @@ void updatemsg_init(hidns_update_msg* msg)
 	msg->rawbuflen = sizeof(msg->len_n);
 }
 
-// parse command
+// parse msg
 int
 updatemsg_parse(hidns_update_msg* msg)
 {
@@ -106,6 +106,35 @@ signature_parse(hidns_update_signature* sig, unsigned char *ptr, int len)
 	sig->signerpfx = ptr + SIGNATURE_FIXLEN;
 	sig->signature = ptr + SIGNATURE_FIXLEN + sig->signerlen;
 	return 0;
+}
+
+// extract command
+hidns_update_command*
+updatemsg_extract_command(hidns_update_msg* msg)
+{
+	if ((msg->_membermap & MSG_MEMBER_MAP_CMD) == 0) {
+		return NULL;
+	}
+	hidns_update_command *cmd = (hidns_update_command*) malloc(sizeof(hidns_update_command));
+	*cmd = msg->cmd;
+	cmd->rrprefixbuf = malloc(msg->cmd.rrprefixlen);
+	memcpy(cmd->rrprefixbuf, msg->cmd.rrprefixbuf, cmd->rrprefixlen);
+	if (cmd->rrtype == COMMAND_RRTYPE_A_TBF) {
+		if (((msg->_membermap & MSG_MEMBER_MAP_ADD) != 0) && msg->addval.type == ADDITION_TYPE_A) {
+			cmd->opcode = COMMAND_RRTYPE_A;
+			cmd->rrvaluelen = msg->addval.length;
+			cmd->rrvaluebuf = malloc(msg->addval.length);
+			memcpy(cmd->rrvaluebuf, msg->addval.valbuf, cmd->rrvaluelen);
+		}
+		else {
+			return NULL;
+		}			
+	}
+	else {
+		cmd->rrvaluebuf = malloc(msg->cmd.rrvaluelen);
+		memcpy(cmd->rrvaluebuf, msg->cmd.rrvaluebuf, cmd->rrvaluelen);
+	}
+	return cmd;
 }
 
 // append value
