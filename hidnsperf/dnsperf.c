@@ -508,10 +508,10 @@ int dns_perf_data_array_init()
  */
 int dns_perf_generate_query(query_t *q)
 {
-    static unsigned short query_id = 0;
+    static unsigned int query_id = 0;
     int                   len;
-    unsigned short        net_id;
-    u_char                 *p;
+    unsigned int        net_id;
+    unsigned char           *p;
     // HEADER               *hp;
     // in_addr_t             addr;
 
@@ -536,10 +536,11 @@ int dns_perf_generate_query(query_t *q)
     q->id = query_id;
 
     /* set message id */
-    net_id = htons(query_id);
-    p = (u_char *) &net_id;
-    q->send_buf[0] = p[0];
-    q->send_buf[1] = p[1];
+    net_id = htonl(query_id);
+    p = (unsigned char*) &net_id;
+    memcpy(q->send_buf, p, 4);
+    // q->send_buf[0] = p[0];
+    // q->send_buf[1] = p[1];
 
     // if (g_real_client) {
     //     q->send_buf[11] = 1;   /* set additional count to  1 */
@@ -593,7 +594,7 @@ int dns_perf_generate_query(query_t *q)
 }
 
 
-int dns_perf_query_process_response(query_t *q, unsigned short id, unsigned short flag)
+int dns_perf_query_process_response(query_t *q, unsigned short id)
 {
     /* 做一些统计工作 */
     if (q->id != id) {
@@ -696,7 +697,7 @@ int dns_perf_query_recv(void *arg)
     //static u_char input[1024];
     int           ret;
     unsigned short  id;
-    unsigned short  flags;
+    // unsigned short  flags;
     query_t        *q = arg;
 
 
@@ -721,10 +722,11 @@ int dns_perf_query_recv(void *arg)
         //id = input[0] * 256 + input[1];
         //flags = input[2] * 256 + input[3];
 
-        id = q->recv_buf[0] << 8 | q->recv_buf[1];
-        flags = q->recv_buf[2] << 8 | q->recv_buf[3];
+        unsigned int net_id;
+        memcpy(&net_id, q->recv_buf, 4);
+        id = ntohl(net_id);
 
-        dns_perf_query_process_response(q, id, flags & 0xF);
+        dns_perf_query_process_response(q, id);
     }
 
     return 0;

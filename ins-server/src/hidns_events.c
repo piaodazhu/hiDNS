@@ -436,6 +436,7 @@ int hidns_localctx_recv(void *arg)
 			abuf->header.exacn = ctx->dname_cnum;
 			abuf->header.rcode = INS_RCODE_OK;
 			ctx->answer_len = ret;
+#if 1
 			if (qbuf->header.qtype != INS_T_CERT && qbuf->header.qtype != INS_T_HSIG && qbuf->header.qtype != INS_T_RRSIG) {
 			// for these record type, try to fetch the signature.
 				ctx->ops.send = fetch_signature;
@@ -443,7 +444,7 @@ int hidns_localctx_recv(void *arg)
 				fetch_signature(ctx);
 				return 0;
 			}
-			printf("explen=%d, answerlen=%d\n", abuf->header.exaplen, ctx->answer_len);
+#endif
 			ins_put_entries_tocache(qbuf, abuf, ret, get_ins_ans_ttl(abuf));
 		}
 	} else { // too long to put into a UDP datagram

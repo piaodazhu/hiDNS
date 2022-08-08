@@ -1,5 +1,7 @@
 # This is a comment and is ommited
 # The columns after column 2 will be ommited if one line contains more than 3 colums.
+# ./dnsperf -s 127.0.0.1 -p 5553 -t 3000 -c 100 -Q 100000 -d names.txt
+/icn/bit/lab101/students/1234/k A 2 3
 
 # hiDNS-DNS
 # 0 INVALID
@@ -52,7 +54,7 @@
 # /icn/hidns/lab101/1/2/3/4 A 3 6
 # TEST CACHE Forwarded
 # 1 firstMISS
-/icn/nip/tools/1/2/3/4 A 3 3
+# /icn/nip/tools/1/2/3/4 A 3 3
 # 2 firstHIT
 # /icn/nip/tools/1/2/3/4 A 3 3
 # 1 secondMISS
