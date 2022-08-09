@@ -387,7 +387,7 @@ int hidns_localctx_recv(void *arg)
 	ins_ans_buf *abuf = (ins_ans_buf*)ctx->answer_buf;
 	ins_qry_buf *qbuf = (ins_qry_buf*)ctx->query_buf;
 
-	ret = recv(ctx->fd, dnsbuf.buf, INS_BUFMAXSIZE, 0);
+	ret = recv(ctx->fd, dnsbuf.buf, 512, 0);
 	if (ret < 0)
 	{
 		if (errno != EWOULDBLOCK && errno != EAGAIN)
@@ -436,7 +436,7 @@ int hidns_localctx_recv(void *arg)
 			abuf->header.exacn = ctx->dname_cnum;
 			abuf->header.rcode = INS_RCODE_OK;
 			ctx->answer_len = ret;
-#if 1
+#if 0
 			if (qbuf->header.qtype != INS_T_CERT && qbuf->header.qtype != INS_T_HSIG && qbuf->header.qtype != INS_T_RRSIG) {
 			// for these record type, try to fetch the signature.
 				ctx->ops.send = fetch_signature;
@@ -778,7 +778,7 @@ int receive_signature(void *arg)
 	ins_ans_buf *abuf = (ins_ans_buf*)ctx->answer_buf;
 	ins_qry_buf *qbuf = (ins_qry_buf*)ctx->query_buf;
 
-	ret = recv(ctx->fd, dnsbuf.buf, INS_BUFMAXSIZE, 0);
+	ret = recv(ctx->fd, dnsbuf.buf, 512, 0);
 	if (ret < 0)
 	{
 		if (errno != EWOULDBLOCK && errno != EAGAIN)

@@ -2,6 +2,10 @@
 #include <stdlib.h>
 #include <string.h>
 #include <fcntl.h>
+
+// #include <sys/epoll.h>
+// #include <pthread.h>
+
 #include "ipsock.h"
 #include "loadconf.h"
 #include "ins_cache.h"
@@ -23,6 +27,26 @@ void sig_handler(int signo)
     }
 }
 
+// void* helper(void *arg) {
+// 	hidns_sock_ctx_t *listenctx = arg;
+// 	int epfd = epoll_create(1);
+// 	struct epoll_event ev;
+// 	ev.events = EPOLLIN || EPOLLET;
+// 	ev.data.ptr = listenctx;
+// 	epoll_ctl(epfd, EPOLL_CTL_ADD, listenctx->fd, &ev);
+// 	int i, nevent;
+// 	struct epoll_event events[100];
+// 	printf("helper loop start\n");
+// 	while (1) {
+// 		nevent = epoll_wait(epfd, events, 100, -1);
+// 		for (i = 0; i < nevent; i++) {
+// 			hidns_sock_ctx_t *ctx = events[i].data.ptr;
+// 			ctx->ops.recv((void*)ctx);
+// 		}
+// 	}
+// 	pthread_exit(NULL);
+// }
+
 int hidns_sockctx_init()
 {
 	hidns_sock_ctx_t *listenctx = (hidns_sock_ctx_t*)malloc(sizeof(hidns_sock_ctx_t));
@@ -32,6 +56,8 @@ int hidns_sockctx_init()
 	listenctx->state = F_READING;
 	listenctx->listenctx = listenctx;
 	hidns_eventsys_set_fd(listenctx->fd, MOD_RD, listenctx->listenctx);
+	// pthread_t pid;
+	// pthread_create(&pid, NULL, helper, listenctx);
 
 	// still need initialize all ctx
 	g_ctx_array = calloc(MAX_SOCK_CTXNUM, sizeof(hidns_sock_ctx_t));

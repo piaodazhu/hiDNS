@@ -602,35 +602,35 @@ int dns_perf_query_process_response(query_t *q, unsigned short id, unsigned shor
     if (delay_us < g_min_delay_us)
         g_min_delay_us = delay_us;
 
-    switch(flag) {
-    case 0:
-        g_success_number++;
-        break;
+    // switch(flag) {
+    // case 0:
+    //     g_success_number++;
+    //     break;
 
-    case 1:
-        g_formerr_number++;
-        break;
+    // case 1:
+    //     g_formerr_number++;
+    //     break;
 
-    case 2:
-        g_serverr_number++;
-        break;
+    // case 2:
+    //     g_serverr_number++;
+    //     break;
 
-    case 3:
-        g_nxdomain_number++;
-        break;
+    // case 3:
+    //     g_nxdomain_number++;
+    //     break;
 
-    case 4:
-        g_notimp_number++;
-        break;
+    // case 4:
+    //     g_notimp_number++;
+    //     break;
 
-    case 5:
-        g_refuse_number++;
-        break;
+    // case 5:
+    //     g_refuse_number++;
+    //     break;
 
-    default:
-        g_other_number++;
-        break;
-    }
+    // default:
+    //     g_other_number++;
+    //     break;
+    // }
 
     return 0;
 }

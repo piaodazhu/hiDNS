@@ -15,7 +15,7 @@
 #include "rkt.h"
 #include "ins_msgformat.h"
 #include "ins_prefix.h"
-#include "ins_cache.h"
+#include "hidns_cache.h"
 #include "dns_utils.h"
 // #include "coworker.h"
 

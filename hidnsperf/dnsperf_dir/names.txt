@@ -1,7 +1,7 @@
 # This is a comment and is ommited
 # The columns after column 2 will be ommited if one line contains more than 3 colums.
 # ./dnsperf -s 127.0.0.1 -p 53 -t 3000 -c 100 -Q 100000 -d names.txt
-# stu.lab101.hidns.icn A
+# lab101.hidns.icn A
+stu.bit.icn A
 # www.bilibili.com A
 # tools.nip.icn A
-lab101.bit.icn A

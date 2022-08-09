@@ -8,7 +8,7 @@
     },
     "INS_PATH_LOCAL": {
         "prefix": [
-            "/icn/bit/"
+            "/icn/hidns/"
         ],
         "resolver": "127.0.0.1",
         "dstport": 53
@@ -19,6 +19,13 @@
                 "/icn/nip/"
             ],
             "resolver": "101.200.86.45 ",
+            "dstport": 5553
+        },
+        {
+            "prefix": [
+                "/icn/bit/"
+            ],
+            "resolver": "123.56.17.30",
             "dstport": 5553
         }
     ],
