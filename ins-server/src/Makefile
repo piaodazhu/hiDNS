@@ -6,7 +6,7 @@ all:	$(OBJDIR)/ins_local_module.o $(OBJDIR)/ins_remote_module.o \
 	$(OBJDIR)/ins-client.o $(OBJDIR)/clienttest.o $(OBJDIR)/ins_cache.o \
 	$(OBJDIR)/events.o $(OBJDIR)/hidns_events.o $(OBJDIR)/hidns_loadbalancer.o \
 	$(OBJDIR)/base64.o $(OBJDIR)/verifystruct.o $(OBJDIR)/ins_verifysync.o \
-	$(OBJDIR)/hidns_cache.o $(OBJDIR)/hashmap.o
+	$(OBJDIR)/hidns_cache.o $(OBJDIR)/hashmap.o $(OBJDIR)/timewheel.o $(OBJDIR)/ttlmap.o 
 
 
 $(OBJDIR)/ins_local_module.o: ins_local_module.c
@@ -58,4 +58,8 @@ $(OBJDIR)/ins_verifysync.o: ins_verifysync.c
 $(OBJDIR)/hidns_cache.o: hidns_cache.c
 	$(CC) -c $^ -o $@ $(CMPFLAG)
 $(OBJDIR)/hashmap.o: hashmap.c
+	$(CC) -c $^ -o $@ $(CMPFLAG)
+$(OBJDIR)/timewheel.o: timewheel.c
+	$(CC) -c $^ -o $@ $(CMPFLAG)
+$(OBJDIR)/ttlmap.o: ttlmap.c
 	$(CC) -c $^ -o $@ $(CMPFLAG)

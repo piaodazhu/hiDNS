@@ -153,8 +153,14 @@ static int hidns_epoll_do_wait(long timeout)
 
     for (i = 0; i < nevents; i++) {
         fd = ep->events[i].data.fd;
+        // if (ep->events[i].events & (EPOLLERR | EPOLLHUP)) {
+        //     // error
+        //     op = (hidns_event_ops_t *) ep->fdtab[fd].cb[MOD_RD].arg;
+        //     hidns_epoll_clear_fd(fd, MOD_RD);
+        //     op->recv((void *) op);
+        // }
 
-        if (ep->events[i].events & (EPOLLOUT | EPOLLERR | EPOLLHUP)) {
+        if (ep->events[i].events & (EPOLLOUT)) {
             op = (hidns_event_ops_t *) ep->fdtab[fd].cb[MOD_WR].arg;
             hidns_epoll_clear_fd(fd, MOD_WR);
             op->send((void *) op);

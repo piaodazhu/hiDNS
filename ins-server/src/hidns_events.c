@@ -578,7 +578,6 @@ int hidns_remotectx_recv(void *arg)
 	// 	g_debug[l] = 'x';
 	// }
 	
-
 	int ret;
 	hidns_sock_ctx_t *ctx = arg;
 
@@ -676,7 +675,6 @@ int hidns_remotectx_send(void *arg)
 			goto error_out;
 		}
 	}
-
 	return 0;
 
 error_out:

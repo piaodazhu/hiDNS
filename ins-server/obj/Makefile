@@ -1,5 +1,5 @@
 modules = ins_local_module.o ins_remote_module.o dns_module.o hidns_events.o events.o
-objects = rkt.o loadconf.o ipsock.o ins_msgformat.o dns_utils.o ins_prefix.o hidns_cache.o hashmap.o base64.o verifystruct.o ins_verifysync.o
+objects = rkt.o loadconf.o ipsock.o ins_msgformat.o dns_utils.o ins_prefix.o hidns_cache.o hashmap.o timewheel.o ttlmap.o base64.o verifystruct.o ins_verifysync.o
 resolver = ins_resolv.o ipsock.o ins_msgformat.o ins_cache.o
 pathtest = pathtest.o
 servertest = servertest.o
@@ -19,10 +19,10 @@ $(BINDIR)/ins-server: $(ins-server) $(modules) $(objects) $(cjson)
 	gcc -o $@ $^ -lresolv -lpthread -lhiredis $(CMPFLAG)
 
 $(BINDIR)/pathtest: $(pathtest) $(modules) $(objects) $(cjson) 
-	gcc -o $@ $^ -lresolv -lhiredis
+	gcc -o $@ $^ -lresolv -lpthread -lhiredis
 
 $(BINDIR)/servertest: $(servertest) $(modules) $(objects) $(cjson)
-	gcc -o $@ $^ -lresolv -lhiredis
+	gcc -o $@ $^ -lresolv -lpthread -lhiredis
 
 $(BINDIR)/hidns_loadbalancer: $(hidns_loadbalancer) $(modules) $(objects) $(cjson)
 	gcc -o $@ $^ -lresolv -lpthread -lhiredis
