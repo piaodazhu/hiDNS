@@ -96,7 +96,7 @@ get_userkeypair(userkeypair* userkeylist, unsigned short keytag)
 {
     userkeypair *ans = userkeylist;
     if (ans == NULL) return NULL;
-    while (ans != NULL && ans->keytag == keytag) {
+    while (ans != NULL && ans->keytag != keytag) {
         ans = ans->next;
     }
     return ans;
@@ -144,8 +144,7 @@ sign_rawcommand(hidns_update_command *cmd,
         goto error_out;
     }
     if (!EVP_DigestUpdate(md_ctx, (const void *)tbsbuf, tbslen)) {
-        printf("TAG3\n");
-	    printf("EVP_DigestUpdate fail \n");
+        printf("EVP_DigestUpdate fail \n");
         goto error_out;
     }
     if (!EVP_DigestFinal(md_ctx, digest, &digest_len)) {
@@ -153,13 +152,13 @@ sign_rawcommand(hidns_update_command *cmd,
         goto error_out;
     }
 
-    printf("digest = %d\n", digest_len);
+    // printf("digest = %d\n", digest_len);
     
     if (ECDSA_sign(0, digest, digest_len, sigbuf, &sigbuflen, keypair->privatekey) != 1) {
         printf("ECDSA_sign fail \n");
 	    goto error_out;
     }
-    printf("signlen = %d\n", sigbuflen);
+    // printf("signlen = %d\n", sigbuflen);
     EVP_MD_CTX_free(md_ctx);
     // make signature
     time_t now;
@@ -176,7 +175,7 @@ sign_rawcommand(hidns_update_command *cmd,
     sig->signature = malloc(sigbuflen);
     memcpy(sig->signerpfx, keypair->subjectpfx, keypair->subjectlen);
     memcpy(sig->signature, sigbuf, sigbuflen);
-    printf("signature done!\n");
+    // printf("signature done!\n");
     return sig;
     
 error_out:
@@ -230,7 +229,9 @@ check_updatemsg_request(hidns_update_msg *msg)
     }
     // printf("TAG3\n");
     X509 *cert = X509_new();
-    if (d2i_X509(&cert, (const unsigned char **)&msg->cert.valbuf, msg->cert.length) == NULL) {
+    unsigned char *p = malloc(msg->cert.length);
+    memcpy(p, msg->cert.valbuf, msg->cert.length);
+    if (d2i_X509(&cert, (const unsigned char **)&p, msg->cert.length) == NULL) {
         X509_free(cert);
         return CHECK_MSG_INVALIDCERT;
     }
@@ -299,7 +300,9 @@ check_updatemsg_reply(hidns_update_msg *msg)
         return CHECK_MSG_UNSUPTCERT;
     }
     X509 *cert = X509_new();
-    if (d2i_X509(&cert, (const unsigned char **)&msg->cert.valbuf, msg->cert.length) == NULL) {
+    unsigned char *p = malloc(msg->cert.length);
+    memcpy(p, msg->cert.valbuf, msg->cert.length);
+    if (d2i_X509(&cert, (const unsigned char **)&p, msg->cert.length) == NULL) {
         X509_free(cert);
         return CHECK_MSG_INVALIDCERT;
     }

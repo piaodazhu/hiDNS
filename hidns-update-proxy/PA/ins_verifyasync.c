@@ -86,5 +86,6 @@ verify_hidns_getresult(int fd, unsigned short *reply_id)
 	// printf("[TAG] verify answer is received! rcode=%d\n", vabuf.header.rcode);
 	// parse result
 	*reply_id = vabuf.header.id;
+	// return 0;
 	return vabuf.header.rcode;
 }

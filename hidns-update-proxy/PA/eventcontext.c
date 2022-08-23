@@ -43,3 +43,15 @@ session_cmdlist_pop(session_ctx_t *ctx, const int vrfd, unsigned short *vrid)
 	*vrid = node->verify_id;
 	return node->cmd;
 }
+
+void session_cmdlist_free(session_ctx_t *ctx)
+{
+	session_cmdlist_t *p, *q;
+	p = ctx->cmdbuf;
+	while (p) {
+		q = p->next;
+		updatemsg_free_command(p->cmd);
+		free(p);
+		p = q;
+	}
+}

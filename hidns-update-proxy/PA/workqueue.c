@@ -110,7 +110,7 @@ updatecmd_init(rr_update_cmd_t *cmd, hidns_update_command *c, session_ctx_t *cmd
 
 int updatecmdlist_mkbuf(const rr_update_cmd_t *cmd, unsigned char* buf, int buflen)
 {
-	int totlen, curidx;
+	int totlen, curidx = 0;
 	totlen = 32;
 	const rr_update_cmd_t *p;
 	p = cmd;
@@ -121,6 +121,7 @@ int updatecmdlist_mkbuf(const rr_update_cmd_t *cmd, unsigned char* buf, int bufl
 	if (totlen >= buflen) {
 		return -1;
 	}
+	
 	// get server IP from the prefix configuration!
 	char* serverip = "127.0.0.1";
 	char startline[32];

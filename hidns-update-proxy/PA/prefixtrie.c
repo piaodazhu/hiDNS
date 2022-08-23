@@ -377,10 +377,13 @@ void dumpbuf_dump(const dumpbuf_t *dbuf, const char *filename)
 unsigned int dumpbuf_load(dumpbuf_t *dbuf, const char *filename)
 {
 	FILE *fp = fopen(filename, "rb");
+	if (fp == NULL) {
+		return 0;
+	}
 	unsigned int len = fread(dbuf->buffer, 1, dbuf->totlen, fp);
 	fclose(fp);
 	if (len == dbuf->totlen) {
-		return -1;
+		return 0;
 	}
 	dbuf->curlen = len;
 	return len;

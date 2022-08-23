@@ -18,7 +18,7 @@ typedef struct session_cmdlist
 typedef struct session_ctx
 {
     int clientfd;
-    int state;
+    int reserved;
     session_cmdlist_t* cmdbuf;
     SSL* ssl;
 } session_ctx_t;
@@ -37,5 +37,6 @@ typedef struct user_epolldata
 
 void session_cmdlist_push(session_ctx_t *ctx, const int vrfd, const unsigned short vrid, hidns_update_command *cmd);
 hidns_update_command* session_cmdlist_pop(session_ctx_t *ctx, const int vrfd, unsigned short *vrid);
+void session_cmdlist_free(session_ctx_t *ctx);
 
 #endif

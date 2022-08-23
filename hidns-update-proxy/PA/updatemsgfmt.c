@@ -100,7 +100,7 @@ signature_parse(hidns_update_signature* sig, unsigned char *ptr, int len)
 	sig->expirtime = ntohl(sig->expirtime);
 	sig->inceptime = ntohl(sig->inceptime);
 	sig->sigbuflen = ntohs(sig->sigbuflen);
-	printf("%d - %d - %d\n", sig->signerlen, sig->sigbuflen, len);
+	// printf("%d - %d - %d\n", sig->signerlen, sig->sigbuflen, len);
 	if (SIGNATURE_FIXLEN + sig->signerlen + sig->sigbuflen != len)
 		return -2;
 	sig->signerpfx = ptr + SIGNATURE_FIXLEN;
@@ -142,11 +142,11 @@ int
 _updatemsg_append_tlv(hidns_update_msg* msg, hidns_update_tlv* dstptr, hidns_update_tlv* tlv, unsigned char typeid)
 {
 	unsigned short tlvlen = tlv->length + TLV_FIXLEN;
-	printf("tlv len=%d, ", tlvlen);
+	// printf("tlv len=%d, ", tlvlen);
 	unsigned short len_n;
 	if (msg->rawbuflen + tlvlen + TLV_FIXLEN > UPDATE_MSG_MAXBUFSIZE)
 		return -2;	
-	printf("offset=%d\n", msg->rawbuflen);
+	// printf("offset=%d\n", msg->rawbuflen);
 	unsigned char* ptr = msg->rawbuf + msg->rawbuflen;
 	*dstptr = *tlv;
 
@@ -175,12 +175,12 @@ updatemsg_append_command(hidns_update_msg* msg, hidns_update_command* cmd)
 		return -1;
 	}	
 	unsigned short cmdlen = COMMAND_FIXLEN + cmd->rrprefixlen + cmd->rrvaluelen;
-	printf("cmd len=%d, ", cmdlen);
+	// printf("cmd len=%d, ", cmdlen);
 	unsigned short len_n;
 	if (msg->rawbuflen + cmdlen + TLV_FIXLEN > UPDATE_MSG_MAXBUFSIZE)
 		return -2;
 	msg->_membermap |= MSG_MEMBER_MAP_CMD;
-	printf("offset=%d\n", msg->rawbuflen);
+	// printf("offset=%d\n", msg->rawbuflen);
 	unsigned char* ptr = msg->rawbuf + msg->rawbuflen;
 
 	msg->rawbuflen += (cmdlen + TLV_FIXLEN);
@@ -222,12 +222,12 @@ updatemsg_append_signature(hidns_update_msg* msg, hidns_update_signature* sig)
 	if ((msg->_membermap & MSG_MEMBER_MAP_SIG) != 0)
 		return -1;
 	unsigned short siglen = SIGNATURE_FIXLEN + sig->signerlen + sig->sigbuflen;
-	printf("sig len=%d=%d+%d+%d, ", siglen, SIGNATURE_FIXLEN, sig->signerlen, sig->sigbuflen);
+	// printf("sig len=%d=%d+%d+%d, ", siglen, SIGNATURE_FIXLEN, sig->signerlen, sig->sigbuflen);
 	unsigned short len_n;
 	if (msg->rawbuflen + siglen + TLV_FIXLEN > UPDATE_MSG_MAXBUFSIZE)
 		return -2;
 	msg->_membermap |= MSG_MEMBER_MAP_SIG;
-	printf("offset=%d, ", msg->rawbuflen);
+	// printf("offset=%d, ", msg->rawbuflen);
 	unsigned char* ptr = msg->rawbuf + msg->rawbuflen;
 
 	msg->rawbuflen += (siglen + TLV_FIXLEN);
@@ -252,7 +252,7 @@ updatemsg_append_signature(hidns_update_msg* msg, hidns_update_signature* sig)
 	ptr += sig->signerlen;
 	memcpy(ptr, sig->signature, sig->sigbuflen);
 	msg->sig.signature = ptr;
-	printf("siglen=%d\n", sig->sigbuflen);
+	// printf("siglen=%d\n", sig->sigbuflen);
 	return 0;
 }
 
@@ -281,14 +281,16 @@ updatemsg_append_certificate(hidns_update_msg* msg, hidns_update_certificate* ce
 int
 updatemsg_set_rcode(hidns_update_msg* msg, hidns_update_rcode rcode)
 {
-	if ((msg->_membermap & MSG_MEMBER_MAP_RCODE) != 0)
-		msg->rcode = rcode;
-		return 0;
+	if ((msg->_membermap & MSG_MEMBER_MAP_RCODE) != 0) {
+		return -1;
+	}
+		
 	if (msg->rawbuflen + RCODE_FIXLEN + TLV_FIXLEN > UPDATE_MSG_MAXBUFSIZE)
 		return -2;
 	
+	msg->rcode = rcode;
 	msg->_membermap |= MSG_MEMBER_MAP_RCODE;
-	printf("offset=%d\n", msg->rawbuflen);
+	// printf("offset=%d\n", msg->rawbuflen);
 	unsigned char* ptr = msg->rawbuf + msg->rawbuflen;
 
 	msg->rawbuflen += (RCODE_FIXLEN + TLV_FIXLEN);
