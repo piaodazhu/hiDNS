@@ -92,9 +92,9 @@ commontlv_parse(hidns_update_tlv* tlv, unsigned char *ptr, int len)
 int
 signature_parse(hidns_update_signature* sig, unsigned char *ptr, int len)
 {
-	FILE *f = fopen("sig.bin", "wb");
-	fwrite(ptr, 1, len, f);
-	fclose(f);
+	// FILE *f = fopen("sig.bin", "wb");
+	// fwrite(ptr, 1, len, f);
+	// fclose(f);
 	memcpy(sig, ptr, SIGNATURE_FIXLEN);
 	sig->sigkeytag = ntohs(sig->sigkeytag);
 	sig->expirtime = ntohl(sig->expirtime);

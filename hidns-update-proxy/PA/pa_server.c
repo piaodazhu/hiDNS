@@ -3,6 +3,7 @@
 prefix_trie_t *PrefixTrie;
 workqueue_t JobQueue;
 int DebugType;
+SSL_CTX *sslctx;
 
 void debugInfo(const char *format, ...)
 {
@@ -21,31 +22,49 @@ void debugInfo(const char *format, ...)
 	}
 }
 
+int verify_cb_pass(int __a, X509_STORE_CTX *__b)
+{
+    return 1;
+}
+
 session_ctx_t* session_accept(int __listenfd, SSL_CTX* sslctx)
 {
 	struct sockaddr_in addr;
-        unsigned int len = sizeof(addr);
+	unsigned int len = sizeof(addr);
 	int clientfd;
 	session_ctx_t* ctx = (session_ctx_t *)malloc(sizeof(session_ctx_t));
 	ctx->cmdbuf = NULL;
 	ctx->ssl = NULL;
 	ctx->clientfd = accept(__listenfd, (struct sockaddr*)&addr, &len);
-	ntySetNonblock(ctx->clientfd);
+	if (ctx->clientfd == -1) {
+		debugInfo("Failed to accept the client.\n");
+		free(ctx);
+		return NULL;
+	}
+	// generate a random id
+	struct timeval tv;
+	gettimeofday(&tv, NULL);
+	ctx->u32id = tv.tv_usec ^ (rand() << 1);
+
+	debugInfo("accept new client [%s:%d].\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+	// ntySetNonblock(ctx->clientfd);
 	if (sslctx == NULL) {
-		debugInfo("accept new client [%s:%d].\n", inet_ntoa(addr.sin_addr), ntohs(addr.sin_port));
+		// ntySetNonblock(ctx->clientfd);
 		return ctx;
 	}
 	ctx->ssl = SSL_new(sslctx);
 	SSL_set_fd(ctx->ssl, ctx->clientfd);
 
         if (SSL_accept(ctx->ssl) <= 0) {
-		ERR_print_errors_fp(stderr);
+		// ERR_print_errors_fp(stderr);
+		debugInfo("Failed to accept ssl client.\n");
 		SSL_shutdown(ctx->ssl);
 		SSL_free(ctx->ssl);
 		close(ctx->clientfd);
 		free(ctx);
 		return NULL;
         }
+	// ntySetNonblock(ctx->clientfd);
 	return ctx;
 }
 
@@ -68,7 +87,11 @@ int session_readn(session_ctx_t *__sctx, void *__buf, size_t __nbytes)
 		if (ret < 0) {	// retry once
 			ret = recv(__sctx->clientfd, __buf, __nbytes, 0);
 		}
-		if (ret != __nbytes) {
+
+		if (ret == 0) {
+			debugInfo("clientfd: the connection closed.\n");
+		}
+		else if (ret != __nbytes) {
 			debugInfo("Failed to read from clientfd.\n");
 			ret = 0;
 		}
@@ -77,7 +100,11 @@ int session_readn(session_ctx_t *__sctx, void *__buf, size_t __nbytes)
 		if (ret < 0) {	// retry once
 			ret = SSL_read(__sctx->ssl, __buf, __nbytes);
 		}
-		if (ret != __nbytes) {
+
+		if (ret == 0) {
+			debugInfo("clientssl: the connection closed.\n");
+		}
+		else if (ret != __nbytes) {
 			debugInfo("Failed to read from clientssl.\n");
 			ret = 0;
 		}
@@ -141,6 +168,7 @@ SSL_CTX* server_sslctx_init()
 		ERR_print_errors_fp(stderr);
 		exit(EXIT_FAILURE);
 	}
+	SSL_CTX_set_verify(ctx, SSL_VERIFY_PEER |  SSL_VERIFY_FAIL_IF_NO_PEER_CERT, verify_cb_pass);
 	return ctx;
 }
 
@@ -187,7 +215,7 @@ void cb_readfromvalidator(void *args)
 	workqueue_add_job(&JobQueue, ujob);
 	debugInfo("cb_readfromvalidator add job to workqueue.\n");
 
-	epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
+	epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
 	free(udata);
 	return;
 
@@ -206,7 +234,7 @@ error_out:
 	{
 		perror("send reply");
 	}
-	epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
+	epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
 	free(udata);
 	return;
 }
@@ -310,7 +338,7 @@ void cb_nsupdaterecv(void *args)
 			workqueue_add_job(&JobQueue, jobptr);
 		}
 
-		epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
+		epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
 		timerfd_settime(udata->eventfd, 0, &timerstop, NULL);
 		close(udata->eventfd);
 		free(udata);
@@ -332,7 +360,7 @@ error_out:
 	}
 	updatejob_free(job);
 
-	epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
+	epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, udata->eventfd, NULL);
 	timerfd_settime(udata->eventfd, 0, &timerstop, NULL);
 	close(udata->eventfd);
 	free(udata);
@@ -417,7 +445,7 @@ void cb_readfromclient(void *args)
 	}
 	vrfd = verify_open_udp_socket_nonblock("127.0.0.1", 5551);
 	gettimeofday(&tv, NULL);
-	vrid = tv.tv_usec && 0xffff;
+	vrid = tv.tv_usec & 0xffff;
 	session_cmdlist_push(ctx, vrfd, vrid, cmd);
 
 	// 4. Verify message
@@ -426,13 +454,13 @@ void cb_readfromclient(void *args)
 
 	newudata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
 	newudata->eventfd = vrfd;
-	newudata->epollfd = udata->epollfd;
-	newudata->eventtype = 1;
+	newudata->ev_epfd = udata->ev_epfd;
+	newudata->udatatype = UDATATYPE_VERIFY;
 	newudata->ctx = ctx;
 	newudata->cb = cb_readfromvalidator;
 	verifyev.events = EPOLLIN | EPOLLET;
 	verifyev.data.ptr = (void *)newudata;
-	if (epoll_ctl(udata->epollfd, EPOLL_CTL_ADD, vrfd, &verifyev) != 0) {
+	if (epoll_ctl(udata->ev_epfd, EPOLL_CTL_ADD, vrfd, &verifyev) != 0) {
 		perror("epoll_ctl_add_verifyfd");
 		exit(EXIT_FAILURE);
 	}
@@ -469,23 +497,150 @@ void cb_readfromclient(void *args)
 	cmd = session_cmdlist_pop(ctx, vrfd, &vrid);
 	updatemsg_free_command(cmd);
 
-	epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, vrfd, NULL);
+	epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, vrfd, NULL);
 	free(newudata);
 	close(vrfd);
 error_out:
 	updatemsg_set_rcode(&reply, rcode);
-	len = send(ctx->clientfd, reply.rawbuf, reply.rawbuflen, 0);
+	len = session_writen(ctx, reply.rawbuf, reply.rawbuflen);
 	if (len != reply.rawbuflen)
 	{
 		perror("send reply");
 	}
 	return;
 conn_close:
-	debugInfo("cb_readfromclient detected the connection closed.\n");
-	epoll_ctl(udata->epollfd, EPOLL_CTL_DEL, ctx->clientfd, NULL);
+	epoll_ctl(udata->ev_epfd, EPOLL_CTL_DEL, ctx->clientfd, NULL);
 	session_close(ctx);
 	free(udata);
 	return;
+}
+
+
+void cb_readfromvalidator0(void *args)
+{
+	user_epolldata_t *udata = args;
+	session_ctx_t *ctx = udata->ctx;
+	int ret, len;
+	unsigned short reqid, replyid;
+	reqid = ctx->u32id & 0xffff;
+	// printf("reqid=%u\n", reqid);
+
+	debugInfo("cb_readfromvalidator0 is called.\n");
+	ret = verify_hidns_getresult(udata->eventfd, &replyid);
+	// printf("replyid=%u\n", replyid);
+	if (epoll_ctl(udata->ac_epfd, EPOLL_CTL_DEL, udata->eventfd, NULL) != 0) {
+		perror("epoll_ctl_del_verifyfd");
+		exit(EXIT_FAILURE);
+	}
+	// goto error_out;
+	if (ret != 0 || replyid != reqid) {
+		debugInfo("cb_readfromvalidator0 error. ret=%u\n", ret);
+		// ERROR Processing
+		goto error_out;
+	}
+	debugInfo("cb_readfromvalidator0 is done.\n");
+
+	struct epoll_event clientrwev;
+	clientrwev.events = EPOLLIN | EPOLLET;
+	udata->eventfd = ctx->clientfd;
+	udata->udatatype = UDATATYPE_CLIENT;
+	udata->cb = cb_readfromclient;
+	clientrwev.data.ptr = (void*)udata;
+	
+	if (epoll_ctl(udata->ev_epfd, EPOLL_CTL_ADD, udata->eventfd, &clientrwev) != 0) {
+		perror("epoll_ctl_add_clientfd");
+		exit(EXIT_FAILURE);
+	}
+	debugInfo("add ssl client fd to eventloop\n");
+	return;
+error_out:
+	session_close(ctx);
+	// printf("tag\n");
+	free(udata);
+	return;
+}
+
+void cb_acceptclient(void *args)
+{
+	user_epolldata_t *udata = args;
+	session_ctx_t *ctx;
+	ctx = session_accept(udata->eventfd, NULL);
+	if (ctx == NULL) {
+		perror("session_accept");
+		return;
+	}
+
+	user_epolldata_t *newudata;
+	newudata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
+	newudata->eventfd = ctx->clientfd;
+	newudata->ac_epfd = udata->ac_epfd;
+	newudata->ev_epfd = udata->ev_epfd;
+	newudata->udatatype = UDATATYPE_CLIENT;
+	newudata->ctx = (void *)ctx;
+	newudata->cb = cb_readfromclient;
+
+	struct epoll_event clientrwev;
+	clientrwev.events = EPOLLIN | EPOLLET;
+	clientrwev.data.ptr = (void *)newudata;
+
+	if (epoll_ctl(newudata->ev_epfd, EPOLL_CTL_ADD, newudata->eventfd, &clientrwev) != 0)
+	{
+		perror("epoll_ctl_add_clientfd");
+	}
+	debugInfo("add client fd to eventloop\n");
+}
+
+void cb_acceptsslclient(void *args)
+{
+	user_epolldata_t *udata = args;
+	session_ctx_t *ctx;
+	ctx = session_accept(udata->eventfd, sslctx);
+	if (ctx == NULL) {
+		perror("session_ssl_accept");
+		return;
+	}
+	X509* cert = SSL_get_peer_certificate(ctx->ssl);
+	unsigned char certbuf[2048];
+	unsigned char *bufptr = certbuf;
+	int certbuflen;
+	// if ((certbuflen = i2d_X509(cert, &certbuf)) <= 0) {
+	// 	perror("i2d_X509");
+	// } else {
+	// 	printf("Tag01, %p\n",ctx);
+	// 	debugInfo("peer cert length=%d.\n", certbuflen);
+	// }
+	// printf("u32id=%u\n", ctx->u32id);
+	certbuflen = i2d_X509(cert, &bufptr);
+	debugInfo("peer cert length=%d.\n", certbuflen);
+
+	// X509_free(cert);
+	// printf("Tag1, %u\n",ctx->u32id);
+	int vrfd, vrid, ret;
+	vrfd = verify_open_udp_socket_nonblock("127.0.0.1", 5551);
+	vrid = ctx->u32id & 0xffff;
+	// printf("u32id=%u\n", ctx->u32id);
+	// printf("vrid=%u\n", vrid);
+	user_epolldata_t *newudata;
+	newudata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
+	newudata->eventfd = vrfd;
+	newudata->ac_epfd = udata->ac_epfd;
+	newudata->ev_epfd = udata->ev_epfd;
+	newudata->udatatype = UDATATYPE_VERIFY;
+	newudata->ctx = (void *)ctx;
+	newudata->cb = cb_readfromvalidator0;
+
+	struct epoll_event verifyev;
+	verifyev.events = EPOLLIN | EPOLLET;
+	verifyev.data.ptr = (void *)newudata;
+
+	if (epoll_ctl(newudata->ac_epfd, EPOLL_CTL_ADD, newudata->eventfd, &verifyev) != 0)
+	{
+		perror("epoll_ctl_add_verifyev");
+	}
+
+	ret = verify_hidns_x509_cert_send(vrfd, vrid, certbuf, certbuflen, VERIFY_REQ_ARGTYPE_CERT_DER);
+	debugInfo("cb_readfromclient start to verify the certificate.\n");
+	// free(certbuf);
 }
 
 void *eventloop_thread(void *arg)
@@ -517,7 +672,7 @@ void *eventloop_thread(void *arg)
 			}
 			// process event
 			udata = events[i].data.ptr;
-			udata->cb(events[i].data.ptr);
+			udata->cb(udata);
 		}
 	}
 error_out:
@@ -567,8 +722,8 @@ void *nsupdater_thread(void *arg)
 			timerfd = timerfd_create(CLOCK_MONOTONIC, TFD_NONBLOCK);
 			newudata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
 			newudata->eventfd = timerfd;
-			newudata->epollfd = epollfd;
-			newudata->eventtype = 2;
+			newudata->ev_epfd = epollfd;
+			newudata->udatatype = UDATATYPE_TIMER;
 			job->pid = pid;
 			newudata->ctx = (void *)job;
 			newudata->cb = cb_nsupdaterecv;
@@ -618,7 +773,7 @@ int main()
 {
 	DebugType = DEBUG_PRINT;
 	server_prefixtrie_init();
-	SSL_CTX *sslctx = server_sslctx_init();
+	sslctx = server_sslctx_init();
 
 	workqueue_init(&JobQueue);
 
@@ -668,28 +823,42 @@ int main()
 	ntySetReUseAddr(listensockfd_ssl);
 
 	struct epoll_event listenev;
+	user_epolldata_t listendata = {
+		listensockfd, 
+		epollfd_listen, 
+		epollfd_event, 
+		UDATATYPE_ACCEPT, 
+		NULL, 
+		cb_acceptclient
+	};
 	listenev.events = EPOLLIN | EPOLLET;
-	listenev.data.fd = listensockfd;
+	listenev.data.ptr = &listendata;
 	epoll_ctl(epollfd_listen, EPOLL_CTL_ADD, listensockfd, &listenev);
 	debugInfo("add listener to epollfd_listen!\n");
 
 	struct epoll_event listenev_ssl;
+	user_epolldata_t listendata_ssl = {
+		listensockfd_ssl, 
+		epollfd_listen, 
+		epollfd_event, 
+		UDATATYPE_ACCEPT, 
+		NULL, 
+		cb_acceptsslclient
+	};
 	listenev_ssl.events = EPOLLIN | EPOLLET;
-	listenev_ssl.data.fd = listensockfd;
+	listenev_ssl.data.ptr = &listendata_ssl;
 	epoll_ctl(epollfd_listen, EPOLL_CTL_ADD, listensockfd_ssl, &listenev_ssl);
 	debugInfo("add ssl listener to epollfd_listen!\n");
 
-	int nevent, i, clientfd;
-	struct epoll_event events[3];
-	// struct sockaddr_in client_addr;
-	// socklen_t client_len;
+	int nevent, i;
+	struct epoll_event events[8];
 	session_ctx_t *ctx;
 	user_epolldata_t *udata;
 	struct epoll_event clientrwev;
 
 	while (1)
 	{
-		nevent = epoll_wait(epollfd_listen, events, 3, EPOLL_TIMEOUT);
+		nevent = epoll_wait(epollfd_listen, events, 8, EPOLL_TIMEOUT);
 		if (nevent == -1)
 		{
 			perror("epoll_wait");
@@ -707,44 +876,38 @@ int main()
 				fprintf(stderr, "events ERR or HUP!\n");
 				goto error_out;
 			}
-			if (events[i].data.fd == listensockfd_ssl) {
-				ctx = session_accept(events[i].data.fd, sslctx);
-			} else {
-				ctx = session_accept(events[i].data.fd, NULL);
-			}
-			if (ctx == NULL) {
-				perror("session_accept");
-				continue;
-			}
-			// memset(&client_addr, 0, sizeof(struct sockaddr_in));
-			// client_len = sizeof(client_addr);
+			user_epolldata_t *udata = (user_epolldata_t*)events[i].data.ptr;
+			udata->cb(udata);
+			// below should be write to events
+			// if (events[i].data.fd == listensockfd_ssl) {
+			// 	ctx = session_accept(events[i].data.fd, sslctx);
+			// } 
+			// else if (events[i].data.fd == listensockfd) {
+			// 	ctx = session_accept(events[i].data.fd, NULL);
+			// } else {
 
-			// clientfd = accept(events[i].data.fd, (struct sockaddr *)&client_addr, &client_len);
-			// if (clientfd < 0)
-			// {
-			// 	perror("accept");
-			// 	return -1;
+			// 	continue;
+			// }
+			// if (ctx == NULL) {
+			// 	perror("session_accept");
+			// 	continue;
 			// }
 
-			// ctx = (session_ctx_t *)malloc(sizeof(session_ctx_t));
-			// ctx->clientfd = clientfd;
-			// ctx->cmdbuf = NULL;
-			// ctx->ssl = NULL; // TBD
 
-			udata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
-			udata->eventfd = clientfd;
-			udata->epollfd = epollfd_event;
-			udata->eventtype = 0;
-			udata->ctx = (void *)ctx;
-			udata->cb = cb_readfromclient;
+			// udata = (user_epolldata_t *)malloc(sizeof(user_epolldata_t));
+			// udata->eventfd = ctx->clientfd;
+			// udata->epollfd = epollfd_event;
+			// udata->eventtype = 0;
+			// udata->ctx = (void *)ctx;
+			// udata->cb = cb_readfromclient;
 
-			clientrwev.events = EPOLLIN | EPOLLET;
-			clientrwev.data.ptr = (void *)udata;
+			// clientrwev.events = EPOLLIN | EPOLLET;
+			// clientrwev.data.ptr = (void *)udata;
 
-			if (epoll_ctl(epollfd_event, EPOLL_CTL_ADD, clientfd, &clientrwev) != 0)
-			{
-				perror("epoll_ctl_add_clientfd");
-			}
+			// if (epoll_ctl(epollfd_event, EPOLL_CTL_ADD, ctx->clientfd, &clientrwev) != 0)
+			// {
+			// 	perror("epoll_ctl_add_clientfd");
+			// }
 		}
 	}
 error_out:
