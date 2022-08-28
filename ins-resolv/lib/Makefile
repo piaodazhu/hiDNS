@@ -1,25 +1,26 @@
-libname = libins-resolv.so
+LIBNAME = libhresolv.so
+LIBDIR = /usr/local/lib/
+HDRDIR = /usr/local/include/
+HDRNAME = hidns/
 headers = ins_msgformat.h ins_prefix.h ins_resolv.h ins_cache.h ins_ipsock.h ins_verifysync.h verifystruct.h base64.h
 objects = ins_msgformat.o ins_prefix.o ins_resolv.o ins_cache.o ins_ipsock.o ins_verifysync.o verifystruct.o base64.o
-all: $(libname)
+all: $(LIBNAME)
 install: all
-	cp $(libname) /usr/local/lib/
-	cp $(headers) /usr/local/include/
+	mkdir -p $(HDRDIR)$(HDRNAME)
+	cp $(LIBNAME) $(LIBDIR)
+	cp $(headers) $(HDRDIR)$(HDRNAME)
 	ldconfig
 	rm -rf *.o *.so
 	echo "Installing done."
 
 uninstall:
-	rm -rf /usr/local/lib/$(libname)
-	for header in $(headers); \
-	do \
-		rm -f "/usr/local/include/$${header}"; \
-	done
+	rm -rf $(LIBDIR)$(LIBNAME)
+	rm -rf $(HDRDIR)$(HDRNAME)
 	ldconfig
 	echo "Uninstalling done."
 
-$(libname): $(objects)
-	gcc -shared -o $@ $(objects) -lhiredis -lpthread
+$(LIBNAME): $(objects)
+	gcc -shared -o $@ $(objects)
 
 ins_msgformat.o:
 	gcc -c -o $@ -fPIC ins_msgformat.c

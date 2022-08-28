@@ -718,7 +718,7 @@ def cleanctxmap():
             fd.close()
 
 
-if __name__ == "__main__":
+def hidnsVerify():
 
     try:
         with open('./trustanchor/public.key', 'rb') as f:

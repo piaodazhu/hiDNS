@@ -1,5 +1,5 @@
-experiment:
-- [ ] application level measurement.
-- [ ] multiple times with error detection.
-- [ ] a good name dataset.
-- [ ] name for: 1 hop, 2 hop, 3hop.
+1. form the hidns library
+2. clean the hidnsNameserver
+3. change all include information of hidns C files
+4. NIP client for hidnsUpdate
+5. finish all README

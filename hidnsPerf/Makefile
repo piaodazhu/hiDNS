@@ -1,7 +1,7 @@
 
 CC      = gcc
 CFLAGS  = -g -Wall
-LIBS    = -lresolv
+LIBS    = -lresolv -lins-resolv
 shell   = /bin/sh
 ECHO    = /bin/echo
 DEFINES    = -DHAVE_EPOLL
@@ -12,12 +12,12 @@ DEFINES     = -DHAVE_KQUEUE
 @echo "Use Kqueue"
 endif
 
-all: dnsperf
+all: hidnsperf
 
-dnsperf: dnsperf.o events.o sock.o
+hidnsperf: hidnsperf.o events.o sock.o
 	$(CC) $(CFLAGS) $(DEFINES) -o $@ $^ $(LIBS) $(INC)
 
-dnsperf.o: dnsperf.c
+hidnsperf.o: hidnsperf.c
 	$(CC) $(CFLAGS) $(DEFINES) -c $^ $(INC)
 
 events.o: events.c
@@ -27,4 +27,4 @@ sock.o: sock.c
 	$(CC) $(CFLAGS) $(DEFINES) -c $^ $(INC)
 
 clean:
-	rm -f *.o dnsperf
+	rm -f *.o hidnsperf
