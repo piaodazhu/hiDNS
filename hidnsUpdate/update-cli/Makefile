@@ -8,10 +8,10 @@ objects = syncverify.o updatemsgfmt.o updatemsgtools.o verifystruct.o base64.o r
 all: $(clientapp) $(secclient)
 
 $(secclient): $(secclientobj) $(objects)
-	gcc -o $@ $^ -lssl -lcrypto -lhiredis -I$(COMMONDIR)
+	gcc -o $@ $^ -lssl -lcrypto -I$(COMMONDIR)
 
 $(clientapp): $(clientappobj) $(objects)
-	gcc -o $@ $^ -lssl -lcrypto -lhiredis -I$(COMMONDIR)
+	gcc -o $@ $^ -lssl -lcrypto -I$(COMMONDIR)
 
 $(secclientobj): update-sslcli.c
 	gcc -c -o $@ $^ -I$(COMMONDIR)

@@ -2,7 +2,7 @@
 #define DNS_MODULE_H
 
 #include "dns_utils.h"
-#include "ins_cache.h"
+#include "peccache.h"
 #include "hidns_events.h"
 
 void 

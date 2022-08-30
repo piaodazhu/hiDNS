@@ -11,11 +11,12 @@
 #include <arpa/nameser.h>
 #include <arpa/nameser_compat.h>
 #include <sys/time.h>
-#include "events.h"
+
+#include "eventsys.h"
 #include "rkt.h"
-#include "ins_msgformat.h"
-#include "ins_prefix.h"
-#include "hidns_cache.h"
+#include "resolvmsgfmt.h"
+#include "prefixtools.h"
+#include "peccache.h"
 #include "dns_utils.h"
 // #include "coworker.h"
 

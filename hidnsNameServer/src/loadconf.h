@@ -10,9 +10,10 @@
 #include <arpa/inet.h>
 #include <string.h>
 #include <syslog.h>
+
 #include "rkt.h"
-#include "ins_msgformat.h"
-#include "ins_prefix.h"
+#include "resolvmsgfmt.h"
+#include "prefixtools.h"
 // #include "ipsock.h"
 
 /* global variables */

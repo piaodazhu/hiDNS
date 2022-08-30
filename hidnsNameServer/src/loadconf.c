@@ -1,5 +1,5 @@
 #include "loadconf.h"
-#include "../cJSON/cJSON.h"
+#include "cJSON.h"
 
 int load_conf_json(char *filename)
 {

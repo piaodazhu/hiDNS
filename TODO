@@ -1,5 +1,5 @@
-1. form the hidns library
-2. clean the hidnsNameserver
-3. change all include information of hidns C files
+1. form the hidns library				y
+2. clean the hidnsNameserver				y	
+3. change all include information of hidns C files	y
 4. NIP client for hidnsUpdate
 5. finish all README

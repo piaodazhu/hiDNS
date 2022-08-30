@@ -6,7 +6,7 @@ objects = eventcontext.o asyncverify.o prefixtrie.o base64.o resolvmsgfmt.o upda
 all: $(appname)
 
 $(appname): $(mainobj) $(objects)
-	gcc -o $@ $(mainobj) $(objects) -lssl -lcrypto -lpthread -lhiredis
+	gcc -o $@ $(mainobj) $(objects) -lssl -lcrypto -lpthread
 
 $(mainobj): pa_server.c
 	gcc -c -o $@ $^ -I$(COMMONDIR)
