@@ -1,6 +1,6 @@
 #include "session.h"
-#include "ins_msgformat.h"
-#include "ins_verifysync.h"
+#include "resolvmsgfmt.h"
+#include "syncverify.h"
 
 #define BUFFER_SIZE          	4096
 #define COOKIE_SECRET_LENGTH 	16

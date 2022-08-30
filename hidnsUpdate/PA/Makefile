@@ -1,34 +1,42 @@
 appname = pa_server
+
+COMMONDIR = ../../hidnsCommon
 mainobj = pa_server.o
-objects = eventcontext.o ins_verifyasync.o prefixtrie.o updatemsgfmt.o updatemsgtools.o verifystruct.o workqueue.o
+objects = eventcontext.o asyncverify.o prefixtrie.o base64.o resolvmsgfmt.o updatemsgfmt.o updatemsgtools.o verifystruct.o workqueue.o
 all: $(appname)
 
 $(appname): $(mainobj) $(objects)
-	gcc -o $@ $(mainobj) $(objects) -lssl -lcrypto -lpthread -lins-resolv
+	gcc -o $@ $(mainobj) $(objects) -lssl -lcrypto -lpthread -lhiredis
 
 $(mainobj): pa_server.c
-	gcc -c -o $@ pa_server.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
 eventcontext.o: eventcontext.c
-	gcc -c -o $@ eventcontext.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-ins_verifyasync.o: ins_verifyasync.c
-	gcc -c -o $@ ins_verifyasync.c
+asyncverify.o: $(COMMONDIR)/asyncverify.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-updatemsgfmt.o: updatemsgfmt.c
-	gcc -c -o $@ updatemsgfmt.c
+base64.o: $(COMMONDIR)/base64.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-updatemsgtools.o: updatemsgtools.c
-	gcc -c -o $@ updatemsgtools.c
+resolvmsgfmt.o: $(COMMONDIR)/resolvmsgfmt.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-verifystruct.o: verifystruct.c
-	gcc -c -o $@ verifystruct.c
+updatemsgfmt.o: $(COMMONDIR)/updatemsgfmt.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-prefixtrie.o: prefixtrie.c
-	gcc -c -o $@ prefixtrie.c
+updatemsgtools.o: $(COMMONDIR)/updatemsgtools.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
+
+verifystruct.o: $(COMMONDIR)/verifystruct.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
+
+prefixtrie.o: $(COMMONDIR)/prefixtrie.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
 workqueue.o: workqueue.c
-	gcc -c -o $@ workqueue.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
 clean:
 	rm -rf *.o pa_server

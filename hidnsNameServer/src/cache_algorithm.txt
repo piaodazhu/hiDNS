@@ -1,0 +1,33 @@
+input: query, answer buffer
+output: rcode
+
+(query->qtype, query->name, maxcn) --> key;
+lookupcache(key) --> reply;
+if reply is none:
+	return MISSED;
+if reply->value->type is JUMP:
+	if reply->value->exacn < query->mincn:
+		return NORECORD;
+	(query->qtype, query->name, reply->value->exacn) --> key;
+	go back to line 5;
+else:
+	reply->value->answer --> answer buffer
+	return OK;
+
+
+input: query, answer
+output: rcode
+
+if answer is empty:
+	return DO_NOTHING;
+query->maxcn --> currentcn;
+while currentcn > answer->exacn:
+	(query->qtype, query->name, currentcn) --> key;
+	(JUMP, answer->exacn, answer->exaplen) --> value;
+	insertcache(key, value)
+	currentcn - 1 --> currentcn
+
+(query->qtype, query->name, currentcn) --> key;
+(ANSWER, answer) --> value;
+insertcache(key, value)
+return OK

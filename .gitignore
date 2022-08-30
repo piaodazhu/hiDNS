@@ -34,7 +34,6 @@ timemeasurement
 .vscode
 *.json
 testdata.txt
-dnsperf
 *.key
 *.pem
 *.csr
@@ -49,4 +48,3 @@ rrsig.txt
 hodtls_server
 hodtls_client
 tmp
-dnsperf

@@ -1,31 +1,38 @@
 appname = prproxy
-headers = iPrefixRegisterProxyConfig.h ipsock.h nipsock.h updatemsgfmt.h updatemsgtools.h verifystruct.h ins_verifysync.h
-objects = prproxy.o ipsock.o nipsock.o updatemsgfmt.o updatemsgtools.o verifystruct.o ins_verifysync.o
+
+COMMONDIR = ../../hidnsCommon
+objects = prproxy.o ipsock.o nipsock.o updatemsgfmt.o updatemsgtools.o verifystruct.o syncverify.o base64.o resolvmsgfmt.o
 all: $(appname)
 
 $(appname): $(objects)
-	gcc -o $@ $(objects) -lssl -lcrypto -lpthread -lins-resolv
+	gcc -o $@ $(objects) -lssl -lcrypto -lpthread -I$(COMMONDIR)
 
 prproxy.o: prproxy.c
-	gcc -c -o $@ prproxy.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-ipsock.o: ipsock.c
-	gcc -c -o $@ ipsock.c
+ipsock.o: $(COMMONDIR)/ipsock.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
 nipsock.o: nipsock.c
-	gcc -c -o $@ nipsock.c
+	gcc -c -o $@ $^
 
-updatemsgfmt.o: updatemsgfmt.c
-	gcc -c -o $@ updatemsgfmt.c
+updatemsgfmt.o: $(COMMONDIR)/updatemsgfmt.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-updatemsgtools.o: updatemsgtools.c
-	gcc -c -o $@ updatemsgtools.c
+updatemsgtools.o: $(COMMONDIR)/updatemsgtools.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-verifystruct.o: verifystruct.c
-	gcc -c -o $@ verifystruct.c
+verifystruct.o: $(COMMONDIR)/verifystruct.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
-ins_verifysync.o: ins_verifysync.c
-	gcc -c -o $@ ins_verifysync.c
+syncverify.o: $(COMMONDIR)/syncverify.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
+
+base64.o: $(COMMONDIR)/base64.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
+
+resolvmsgfmt.o: $(COMMONDIR)/resolvmsgfmt.c
+	gcc -c -o $@ $^ -I$(COMMONDIR)
 
 clean:
 	rm -rf *.o prproxy

@@ -9,7 +9,8 @@
 
 #include "updatemsgtools.h"
 #include "updatemsgfmt.h"
-#include "ins_verifysync.h"
+#include "resolvmsgfmt.h"
+#include "syncverify.h"
 
 #define PAPORT		1038
 #define PAPORT_SEC	1039

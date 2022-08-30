@@ -10,7 +10,7 @@
 #include "ipsock.h"
 #include "updatemsgtools.h"
 #include "iPrefixRegisterProxyConfig.h"
-#include "ins_verifysync.h"
+#include "resolvmsgfmt.h"
 
 hidns_update_msg request;
 hidns_update_msg reply;
@@ -76,7 +76,7 @@ int find_server(struct sockaddr_in *server, char* prefix, int plen)
 	memcpy(buf, prefix, plen);
 	buf[plen] = 0;
 	
-	struct sockaddr** serverlist = ins_getadminbyname(buf, HIDNS_SERVER_IP, 1, insprefix_count_components(prefix, plen));
+	struct sockaddr** serverlist = ins_getadminbyname(buf, HIDNS_SERVER_IP, 1, insprefix_countcomponents(prefix, plen));
 	if (serverlist == NULL ) {
 		return -1;
 	}

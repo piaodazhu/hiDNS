@@ -22,13 +22,13 @@
 #include "updatemsgtools.h"
 #include "verifystruct.h"
 #include "workqueue.h"
-#include "ins_verifyasync.h"
+#include "asyncverify.h"
 #include "prefixtrie.h"
 
 #define SERVER_PREFIX		"/icn/bit/"
 #define SERVER_PKEYFNAME	"private.key"
 #define SERVER_CERTFNAME	"cert.pem"
-#define PREFIX_DUMPFNAME	"icn_bit.dump"
+#define PREFIX_DUMPFNAME	".icn_bit.dump"
 #define SERVER_PORT		1038
 #define SERVER_SSL_PORT		1039
 #define SERVER_IP		"127.0.0.1"

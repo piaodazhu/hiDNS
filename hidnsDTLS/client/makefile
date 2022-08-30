@@ -5,13 +5,15 @@
 
 WORKDIR = `pwd`
 
+COMMONDIR = ../../hidnsCommon
+
 CC = gcc
 CXX = g++
 AR = ar
 LD = g++
 WINDRES = windres
 
-INC = 
+INC = -I$(COMMONDIR)
 CFLAGS = -Wall
 RESINC = 
 LIBDIR = 
@@ -40,9 +42,9 @@ OBJDIR_RELEASE = obj/Release
 DEP_RELEASE = 
 OUT_RELEASE = bin/Release/hodtls_client
 
-OBJ_DEBUG = $(OBJDIR_DEBUG)/main.o $(OBJDIR_DEBUG)/session.o $(OBJDIR_DEBUG)/hashmap.o $(OBJDIR_DEBUG)/ins_msgformat.o $(OBJDIR_DEBUG)/base64.o $(OBJDIR_DEBUG)/verifystruct.o $(OBJDIR_DEBUG)/ins_verifysync.o
+OBJ_DEBUG = $(OBJDIR_DEBUG)/main.o $(OBJDIR_DEBUG)/session.o $(OBJDIR_DEBUG)/hashmap.o $(OBJDIR_DEBUG)/resolvmsgfmt.o $(OBJDIR_DEBUG)/base64.o $(OBJDIR_DEBUG)/verifystruct.o $(OBJDIR_DEBUG)/syncverify.o
 
-OBJ_RELEASE = $(OBJDIR_RELEASE)/main.o $(OBJDIR_RELEASE)/session.o $(OBJDIR_RELEASE)/hashmap.o $(OBJDIR_RELEASE)/ins_msgformat.o $(OBJDIR_RELEASE)/base64.o $(OBJDIR_RELEASE)/verifystruct.o $(OBJDIR_RELEASE)/ins_verifysync.o
+OBJ_RELEASE = $(OBJDIR_RELEASE)/main.o $(OBJDIR_RELEASE)/session.o $(OBJDIR_RELEASE)/hashmap.o $(OBJDIR_RELEASE)/resolvmsgfmt.o $(OBJDIR_RELEASE)/base64.o $(OBJDIR_RELEASE)/verifystruct.o $(OBJDIR_RELEASE)/syncverify.o
 
 all: debug release
 
@@ -60,25 +62,25 @@ out_debug: before_debug $(OBJ_DEBUG) $(DEP_DEBUG)
 	$(LD) $(LIBDIR_DEBUG) -o $(OUT_DEBUG) $(OBJ_DEBUG)  $(LDFLAGS_DEBUG) $(LIB_DEBUG)
 
 $(OBJDIR_DEBUG)/main.o: main.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c main.c -o $(OBJDIR_DEBUG)/main.o
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/main.o
 
 $(OBJDIR_DEBUG)/session.o: session.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c session.c -o $(OBJDIR_DEBUG)/session.o
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/session.o
 
-$(OBJDIR_DEBUG)/hashmap.o: hashmap.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c hashmap.c -o $(OBJDIR_DEBUG)/hashmap.o
+$(OBJDIR_DEBUG)/hashmap.o: $(COMMONDIR)/hashmap.c
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/hashmap.o
 
-$(OBJDIR_DEBUG)/ins_msgformat.o: ins_msgformat.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c ins_msgformat.c -o $(OBJDIR_DEBUG)/ins_msgformat.o
+$(OBJDIR_DEBUG)/resolvmsgfmt.o: $(COMMONDIR)/resolvmsgfmt.c
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/resolvmsgfmt.o
 
-$(OBJDIR_DEBUG)/base64.o: base64.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c base64.c -o $(OBJDIR_DEBUG)/base64.o
+$(OBJDIR_DEBUG)/base64.o: $(COMMONDIR)/base64.c
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/base64.o
 
-$(OBJDIR_DEBUG)/verifystruct.o: verifystruct.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c verifystruct.c -o $(OBJDIR_DEBUG)/verifystruct.o
+$(OBJDIR_DEBUG)/verifystruct.o: $(COMMONDIR)/verifystruct.c
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/verifystruct.o
 
-$(OBJDIR_DEBUG)/ins_verifysync.o: ins_verifysync.c
-	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c ins_verifysync.c -o $(OBJDIR_DEBUG)/ins_verifysync.o
+$(OBJDIR_DEBUG)/syncverify.o: $(COMMONDIR)/syncverify.c
+	$(CC) $(CFLAGS_DEBUG) $(INC_DEBUG) -c $^ -o $(OBJDIR_DEBUG)/syncverify.o
 
 clean_debug: 
 	rm -f $(OBJ_DEBUG) $(OUT_DEBUG)
@@ -97,25 +99,25 @@ out_release: before_release $(OBJ_RELEASE) $(DEP_RELEASE)
 	$(LD) $(LIBDIR_RELEASE) -o $(OUT_RELEASE) $(OBJ_RELEASE)  $(LDFLAGS_RELEASE) $(LIB_RELEASE)
 
 $(OBJDIR_RELEASE)/main.o: main.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c main.c -o $(OBJDIR_RELEASE)/main.o
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/main.o
 
 $(OBJDIR_RELEASE)/session.o: session.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c session.c -o $(OBJDIR_RELEASE)/session.o
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/session.o
 
-$(OBJDIR_RELEASE)/hashmap.o: hashmap.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c hashmap.c -o $(OBJDIR_RELEASE)/hashmap.o
+$(OBJDIR_RELEASE)/hashmap.o: $(COMMONDIR)/hashmap.c
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/hashmap.o
 
-$(OBJDIR_RELEASE)/ins_msgformat.o: ins_msgformat.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c ins_msgformat.c -o $(OBJDIR_RELEASE)/ins_msgformat.o
+$(OBJDIR_RELEASE)/resolvmsgfmt.o: $(COMMONDIR)/resolvmsgfmt.c
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/resolvmsgfmt.o
 
-$(OBJDIR_RELEASE)/base64.o: base64.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c base64.c -o $(OBJDIR_RELEASE)/base64.o
+$(OBJDIR_RELEASE)/base64.o: $(COMMONDIR)/base64.c
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/base64.o
 
-$(OBJDIR_RELEASE)/verifystruct.o: verifystruct.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c verifystruct.c -o $(OBJDIR_RELEASE)/verifystruct.o
+$(OBJDIR_RELEASE)/verifystruct.o: $(COMMONDIR)/verifystruct.c
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/verifystruct.o
 
-$(OBJDIR_RELEASE)/ins_verifysync.o: ins_verifysync.c
-	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c ins_verifysync.c -o $(OBJDIR_RELEASE)/ins_verifysync.o
+$(OBJDIR_RELEASE)/syncverify.o: $(COMMONDIR)/syncverify.c
+	$(CC) $(CFLAGS_RELEASE) $(INC_RELEASE) -c $^ -o $(OBJDIR_RELEASE)/syncverify.o
 
 clean_release: 
 	rm -f $(OBJ_RELEASE) $(OUT_RELEASE)

@@ -1,7 +1,7 @@
 
 CC      = gcc
 CFLAGS  = -g -Wall
-LIBS    = -lresolv -lins-resolv
+LIBS    = -lresolv -lhidns
 shell   = /bin/sh
 ECHO    = /bin/echo
 DEFINES    = -DHAVE_EPOLL
